@@ -1,0 +1,24 @@
+# Company data: QuickBooks files, SQLite exports, and their engine side files
+qb-sandbox/
+output/
+*.QBW
+*.qbw
+*.QBW.*
+*.qbw.*
+*.sqlite
+*.sqlite-journal
+*.TLG
+*.ND
+*.DSN
+
+# Third-party tools and archives (not ours to redistribute)
+*.exe
+*.zip
+*.chm
+*.wsb
+
+# Python / editor noise
+__pycache__/
+*.pyc
+.vscode/
+.idea/
