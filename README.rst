@@ -2,18 +2,18 @@ qbw-to-sqlite
 =============
 
 Convert a QuickBooks Desktop company file (``.QBW``, or a ``.QBB`` backup) into a
-SQLite database that any SQLite tool, pandas, Metabase or ``sqlite3`` can read.
-Every user table is copied, with declared column types, primary keys, row-count
-checks, entity views and provenance tables. It needs no QuickBooks application
-and no Intuit SDK.
+SQLite database that any SQLite tool can read: pandas, Metabase or ``sqlite3``.
+The conversion copies every user table with its declared column types and primary
+keys. It checks row counts, then adds entity views and provenance tables. It needs
+neither the QuickBooks application nor the Intuit SDK.
 
-    **Scope.** Use this on your own company files, for data portability,
-    analysis, archival, or forensic review you are authorized to perform. It does
-    not crack or recover unknown passwords. It relies on a QuickBooks user *you*
-    create with no password.
+    **Scope.** Use this only on company files you are authorized to examine: your
+    own data, or archival, analysis or forensic review you are authorized to
+    perform. It does not crack or recover unknown passwords. It relies on a
+    QuickBooks user *you* create with no password.
 
-The package is ``minchinweb.scripts.qbw_to_sqlite``. It is a library first, and
-the ``qbw-to-sqlite`` command is a thin layer over the same API.
+The package is ``minchinweb.scripts.qbw_to_sqlite``. It is a library first. The
+``qbw-to-sqlite`` command wraps the same API.
 
 Install
 -------
@@ -23,11 +23,11 @@ Install
     pip install minchinweb.scripts.qbw-to-sqlite
     pip install "minchinweb.scripts.qbw-to-sqlite[openqbw]"   # optional backend
 
-The default ``sa`` backend needs **SQL Anywhere 17** installed (Windows). The
-package cannot install it. The Developer Edition is free from SAP.
+The default ``sa`` backend needs **SQL Anywhere 17** on Windows. The package does
+not install it. SAP offers the Developer Edition free of charge.
 
-Library usage
--------------
+Use as a library
+----------------
 
 .. code-block:: python
 
@@ -48,22 +48,22 @@ Library usage
     if not report.ok:
         print("finished with problems:", report.problems)
 
-``convert()`` returns a ``ConversionReport``. Its fields are ``output``,
-``tables`` (one ``TableResult`` per table, with its status and counts), ``views``,
-``views_skipped``, ``problems``, ``source_sha256`` and ``meta``. The properties
-``ok`` and ``rows_written`` summarize them.
+``convert()`` returns a ``ConversionReport`` with the fields ``output``, ``tables``
+(one ``TableResult`` per table, with its status and counts), ``views``,
+``views_skipped``, ``problems``, ``source_sha256`` and ``meta``. The ``ok`` and
+``rows_written`` properties summarize them.
 
-``convert()`` raises ``QBWError`` when the conversion cannot run at all: a
-missing file, a refused output path, an engine that will not start, or a login
-that fails. No output is written in those cases. It raises ``ValueError`` for an
-argument that is not valid, for example ``mode="append"``. A report with problems
-is still a finished conversion, so check ``report.ok``.
+``convert()`` raises ``QBWError`` when the conversion cannot run at all: the file is
+missing, the output path is refused, the engine will not start, or the login fails.
+It writes no output in those cases. It raises ``ValueError`` for an invalid
+argument, such as ``mode="append"``. A report with problems still means the
+conversion finished, so check ``report.ok``.
 
-Logging goes through the standard :mod:`logging` module, under the logger
-``minchinweb.scripts.qbw_to_sqlite``. The library attaches no handler and
-configures no logging. Importing it changes nothing in the process.
+Logging uses the standard ``logging`` module, under the logger
+``minchinweb.scripts.qbw_to_sqlite``. The library attaches no handler and configures
+no logging, so importing it changes nothing in the process.
 
-The full list of arguments is in the docstring of ``convert``.
+The docstring of ``convert`` lists every argument.
 
 Command line
 ------------
@@ -73,10 +73,9 @@ Command line
     qbw-to-sqlite --qbw "Your Company.QBW" --out your_company.sqlite ^
         --uid 6265616e636f756e74 --pwd 07ec23...2fc00
 
-From a checkout, without installing, run ``python qbw_to_sqlite.py`` with the
-same arguments. The command line is built on the public API, so
-``minchinweb/scripts/qbw_to_sqlite/cli.py`` is a working example of calling the
-library.
+From a checkout, run ``python qbw_to_sqlite.py`` with the same arguments, without
+installing. The command line uses the public API, so
+``minchinweb/scripts/qbw_to_sqlite/cli.py`` shows how to call the library.
 
 .. list-table::
    :header-rows: 1
@@ -87,13 +86,13 @@ library.
    * - ``--qbw``
      - ``.QBW`` or ``.QBB`` company file. Read only, copied, never modified.
    * - ``--out``
-     - SQLite file to create. Refused if it is a QuickBooks file. Replaced atomically, also when the run finishes with problems.
+     - SQLite file to create. Refused if it is a QuickBooks file. Replaced atomically, even when the run finishes with problems.
    * - ``--backend``
      - ``sa`` (default) or ``openqbw`` (experimental).
    * - ``--uid`` / ``--pwd``
      - SQL Anywhere credential (``sa`` backend).
    * - ``--mode``
-     - ``replace`` (default): build a fresh output and overwrite the old one. ``merge``: upsert by primary key into the existing output. Deleted rows are kept, and tables without a primary key gain duplicates. See `Re-running on an updated file`_.
+     - ``replace`` (default) builds a fresh output and overwrites the old one. ``merge`` upserts by primary key into the existing output. Deleted rows are kept, and tables without a primary key gain duplicates. See `Re-running on an updated file`_.
    * - ``--tables PATTERN``
      - Only tables matching a glob. Matches ``table`` or ``owner.table``. Repeatable.
    * - ``--exclude PATTERN``
@@ -115,8 +114,8 @@ library.
    * - ``--keep-copy``
      - Keep the working copy and engine log.
 
-Exit status
-~~~~~~~~~~~
+Exit codes
+~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -148,7 +147,7 @@ Backends
      - Every base table, typed, with views and provenance. Tested on a sample company file.
    * - ``openqbw``
      - ``pip install openqbw`` (Python 3.10+), no login
-     - Catalog, indexes, transactions and line items only. **Experimental.** On the sample file it found 643 catalog entries and **0 transactions and 0 line items**, so it is not a substitute for ``sa``.
+     - Catalog, indexes, transactions and line items only. **Experimental.** On the sample file it found 643 catalog entries and **0 transactions and 0 line items**, so it does not replace ``sa``.
 
 How the sa backend works
 ------------------------
@@ -164,26 +163,26 @@ How the sa backend works
                                       SQLite  <out>.partial --> atomic rename to <out>
 
 1. **Hash the source** (SHA-256), then **copy it** to a working file. A ``.QBB``
-   backup is extracted first (see `QBB backups`_). The original is never opened
-   for writing.
-2. **Start a private engine, read-only:** ``dbeng17.exe -r -x tcpip(port=...)``.
+   backup is extracted first (see `QBB backups`_). The library never opens the
+   original for writing.
+2. **Start a private, read-only engine:** ``dbeng17.exe -r -x tcpip(port=...)``.
    ``-r`` makes the whole server read-only. The library waits for ``Now accepting
    requests`` before it connects.
-3. **Connect** with ``sqlanydb``, the driver bundled with the SQL Anywhere install.
-   The library sets the driver's environment variables only for the duration of
-   the import and the connection, then restores them.
+3. **Connect** with ``sqlanydb``, the driver bundled with SQL Anywhere. The library
+   sets the driver's environment variables only for the import and the connection,
+   then restores them.
 4. **Read the catalog.** ``SYS.SYSTAB`` lists the base tables. ``SYS.SYSCOLUMN``
-   and ``SYS.SYSDOMAIN`` give each column's type, width, scale, nullability and
-   key flag. System owners (``SYS``, ``dbo``, ...) are skipped. Real data is owned
-   by **QBAdminGroup**.
-5. **Copy each table** in batches. Declared types and primary keys come from the
-   catalog. Each table's row count is checked against ``COUNT(*)`` on the source.
-6. **Create entity views** when their source tables exist.
+   and ``SYS.SYSDOMAIN`` give each column's type, width, scale, nullability and key
+   flag. The library skips system owners (``SYS``, ``dbo``, ...). Real data belongs
+   to **QBAdminGroup**.
+5. **Copy each table** in batches, using the declared types and primary keys from
+   the catalog. It checks each row count against ``COUNT(*)`` on the source.
+6. **Create entity views** whose source tables exist.
 7. **Write provenance tables**, then rename the output into place. A failed run
    leaves any existing output untouched.
 
-The credential
---------------
+Getting the UID and PWD
+-----------------------
 
 QuickBooks stores each user's database password as a derived value::
 
@@ -193,19 +192,20 @@ QuickBooks stores each user's database password as a derived value::
                "beancount" -> 6265616e636f756e74
 
 The ``prepared(...)`` step mixes in an Intuit secret that cannot be reproduced
-offline, **except for the empty password**, whose value depends only on the user
-name. So the recipe is: make a QuickBooks user with **no password**, and use its
-blank-password credential.
+offline. The exception is the empty password: its value depends only on the user
+name. So make a QuickBooks user with **no password**, and use its blank-password
+credential.
 
 1. Make the file writable: ``attrib -r "Your Company.QBW"``.
 2. In QuickBooks, log in as **Admin** and open the company.
-3. **Company > Set Up Users and Passwords > Set Up Users > Add User.** Name it,
-   e.g. ``beancount``, **leave the password blank**, and give it access to all areas.
-4. **Exit QuickBooks completely**, so the user is written to the file on disk.
+3. Choose **Company > Set Up Users and Passwords > Set Up Users > Add User.** Name
+   the user, e.g. ``beancount``, **leave the password blank**, and grant access to
+   all areas.
+4. **Exit QuickBooks completely**, so the new user is written to disk.
 5. Get the credential. ``UID`` is ``python -c "print('beancount'.encode().hex())"``.
    ``PWD`` is the blank-password output of the *SQL Anywhere database UID & PWD
-   Calculator* in Thegrideon QuickBooks Forensics. It is about 68 hex characters
-   of the form ``07...00``.
+   Calculator* in Thegrideon QuickBooks Forensics. It is about 68 hex characters of
+   the form ``07...00``.
 
 The same user name gives the same ``UID`` and ``PWD`` in every company file. If a
 file's **Admin** user has no password, use Admin directly.
@@ -213,29 +213,29 @@ file's **Admin** user has no password, use Admin directly.
 QBB backups
 -----------
 
-A ``.QBB`` holds a text header, then a zlib-compressed company file. The library
-finds the zlib stream after the ``Compression_Format=Deflate_ZLIB;`` marker, and
-accepts only a stream that inflates to a SQL Anywhere file (magic bytes at
-offset 20). The inflated file is then converted like a ``.QBW``.
+A ``.QBB`` holds a text header followed by a zlib-compressed company file. The
+library finds the zlib stream after the ``Compression_Format=Deflate_ZLIB;`` marker.
+It accepts only a stream that inflates to a SQL Anywhere file (magic bytes at
+offset 20), then converts the result like a ``.QBW``.
 
-**Not yet tested against a real backup.** No ``.QBB`` sample was available. The
-code path has a synthetic container test, and the extracted company file is
-checked to be identical to the one it was built from.
+**Not yet tested on a real backup.** No ``.QBB`` sample was available. A synthetic
+container test covers this code path, and the extracted company file matches the
+one the test built it from.
 
-Output
-------
+What the output contains
+------------------------
 
 Data tables
 ~~~~~~~~~~~
 
 Every selected base table, owned by ``QBAdminGroup`` (typically **297 tables**).
-Names mirror the source. Tables from other owners are prefixed, for example
-``QBAdminGroup_abmc_invoice_lineitem``. The business data is in the ``abmc_*``
-tables. Tables prefixed ``I_``, ``lm_``, ``tq_``, ``perf_`` and ``patch_`` are
+Names mirror the source. Tables from other owners get a prefix, for example
+``QBAdminGroup_abmc_invoice_lineitem``. The business data lives in the ``abmc_*``
+tables. Tables prefixed ``I_``, ``lm_``, ``tq_``, ``perf_`` and ``patch_`` hold
 QuickBooks internals and are usually small.
 
-Types and keys
-~~~~~~~~~~~~~~
+Column types and keys
+~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -252,12 +252,12 @@ Types and keys
    * - ``binary``, ``varbinary``, ``long binary``, ...
      - ``BLOB``
 
-``DECIMAL`` and ``NUMERIC`` are declared ``TEXT`` on purpose. SQLite's
-``NUMERIC`` affinity would turn ``"12.50"`` into a float and lose the exact value.
+The library maps ``DECIMAL`` and ``NUMERIC`` to ``TEXT`` on purpose. SQLite's
+``NUMERIC`` affinity would convert ``"12.50"`` to a float and lose the exact value.
 
-Primary keys are recorded in ``_qbw_columns`` and enforced by a unique index
-``<table>__pk`` when the copy is clean. The index is not a table constraint, so a
-bad row cannot abort a table load.
+Primary keys go into ``_qbw_columns``. They are enforced by a unique index,
+``<table>__pk``, when the copy is clean. The index is not a table constraint, so
+one bad row cannot abort a table load.
 
 Provenance tables
 ~~~~~~~~~~~~~~~~~
@@ -312,8 +312,8 @@ Table statuses
 Entity views
 ~~~~~~~~~~~~
 
-When their source tables exist, these views are created. Each is validated after
-creation, and is dropped and reported as skipped if it does not query.
+The library creates these views when their source tables exist. It validates each
+view after creation. A view that fails to query is dropped and reported as skipped.
 
 .. list-table::
    :header-rows: 1
@@ -335,18 +335,18 @@ creation, and is dropped and reported as skipped if it does not query.
      - ``abmc_account_user``
      - Names with the deleted flag.
 
-Only invoices are covered so far. Bills, checks, sales receipts, payments and
-journal entries need the same kind of join, verified against data first.
+Only invoices are covered so far. To add bills, checks, sales receipts, payments and
+journal entries, write the same kind of join, and verify it against the data first.
 
 Re-running on an updated file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-What happens when you run the conversion again with an existing ``--out`` file
-depends on ``--mode``. The default is ``replace``.
+The result of running the conversion again on an existing ``--out`` file depends on
+``--mode``. The default is ``replace``.
 
 ``replace`` (default)
-    Builds a new output from the current company file, then renames it over the
-    old file. The old file is not read, compared or kept. If the run finishes with
+    Builds a new output from the current company file, then renames it over the old
+    one. The old file is not read, compared or kept. If the run finishes with
     problems (exit status 3), the new output still replaces the old one. A fatal
     error leaves the old file untouched. To keep earlier exports, give each run its
     own name, for example ``--out your_company_2026-11-20.sqlite``, and compare the
@@ -355,79 +355,80 @@ depends on ``--mode``. The default is ``replace``.
 ``merge`` (``--mode merge``)
     Starts from the existing output and upserts each selected table by primary key.
 
-    - Rows that changed in QuickBooks are overwritten, and new rows are added. For
-      tables with a primary key, a repeat run on an unchanged file gives the same
-      counts.
-    - Rows **deleted** in QuickBooks are **not** removed. The tool reads full tables
-      and does not detect deletions.
-    - A table whose column names have changed is dropped and recreated from the new
-      file, so its earlier rows are lost. Its note reads ``recreated: columns changed
-      since last run``.
-    - Tables not selected on the run are left as they were.
+    - Changed rows are overwritten, and new rows are added. For tables with a
+      primary key, a repeat run on an unchanged file gives the same counts.
+    - The tool reads full tables and does not detect deletions. Rows **deleted** in
+      QuickBooks are **not** removed.
+    - If a table's column names change, the table is dropped and recreated from the
+      new file, so its earlier rows are lost. Its note reads ``recreated: columns
+      changed since last run``.
+    - Unselected tables keep their earlier contents.
     - **Tables with no primary key gain duplicate rows on every run.** Only keyed
-      tables are upserted. In a test, two identical merges of a two-row keyless
-      table gave four rows. Do not use merge on a dataset that includes keyless
-      tables until this is fixed.
+      tables are upserted. In one test, two identical merges of a two-row keyless
+      table produced four rows. Do not merge a dataset that includes keyless tables
+      until this is fixed.
     - The ``_qbw_*`` provenance tables are rebuilt on each run, so they describe only
       the latest run. The output does not record which run wrote which row, and
-      nothing checks that the new company file is the same one as before.
+      nothing checks that the new company file is the same file as before.
 
 Text encoding
 -------------
 
-The database declares ``windows-1252``, but QuickBooks stores a **mix of UTF-8
-and cp1252** bytes in the same database. Currency symbols such as ``Kč`` and ``€``
-are UTF-8, and accented names such as ``Québec`` are cp1252. The driver decodes
-as latin-1, which maps every byte and never raises. Each string is then re-read
-as UTF-8 when valid, and as cp1252 otherwise. Without this, tables with such
-bytes silently export zero rows.
+The database declares ``windows-1252``, but QuickBooks stores a **mix of UTF-8 and
+cp1252** bytes in the same database. Currency symbols such as ``Kč`` and ``€`` are
+UTF-8. Accented names such as ``Québec`` are cp1252. The driver decodes everything
+as latin-1, which maps every byte and never raises. The library then re-reads each
+string as UTF-8 when the bytes are valid UTF-8, and as cp1252 otherwise. Without
+this step, tables with such bytes silently export zero rows.
 
-Notes and caveats
------------------
+Caveats
+-------
 
-- **The original file is never modified.** The engine runs on a read-only copy.
-  The only change to the company file is the QuickBooks user you created. Delete
-  that user afterwards if you do not want it.
-- **Logging in runs QuickBooks' login procedure** on the copy, which may touch a
-  last-login timestamp. The copy, not the evidence file, is what the engine touches.
-- **Different user names give different credentials.** Keep ``beancount`` to reuse one credential.
+- **The original file is never modified.** The engine runs on a read-only copy. The
+  only change to the company file is the QuickBooks user you create. Delete that
+  user afterwards if you do not want it.
+- **Logging in runs QuickBooks' login procedure on the copy,** which may update a
+  last-login timestamp. The engine touches the copy, not the evidence file.
+- **Different user names give different credentials.** Use the same name, such as
+  ``beancount``, to reuse one credential.
 - **The ``.DSN`` and ``.ND`` files** beside a ``.QBW`` belong to QuickBooks. This
   library does not produce them.
-- **SQL Anywhere version.** This targets the SQL Anywhere **17** format used by
-  QuickBooks 2018 and later. Older files need the matching engine and password form.
-- **Output is written to a ``.<name>.<id>.partial`` file beside ``out``**, renamed
-  only on completion. A fatal error leaves any existing output untouched.
-- **Engine process.** Only one engine serves a conversion at a time. The driver
-  stays loaded for the rest of the process, so the first conversion fixes which
-  SQL Anywhere install the process uses.
+- **SQL Anywhere version.** The library targets the SQL Anywhere **17** format that
+  QuickBooks 2018 and later use. Older files need the matching engine and password
+  form.
+- **Output goes to a ``.<name>.<id>.partial`` file beside ``out``.** The library
+  renames it only on completion. A fatal error leaves any existing output untouched.
+- **One engine serves one conversion at a time.** The driver stays loaded for the
+  life of the process, so the first conversion fixes which SQL Anywhere install the
+  process uses.
 
-Not implemented
----------------
+Known gaps
+----------
 
-- **Page CRC verification.** SQL Anywhere's page checksum is not documented, so
-  it could not be implemented and verified.
+- **Page CRC verification.** SQL Anywhere's page checksum is undocumented, so it has
+  not been implemented or verified.
 - **Deletion detection in merge mode** (see above).
 - **Incremental reads from a change cursor.** Merge re-reads full tables.
 - **AI-agent redaction and audit logging.** Out of scope for an extractor.
 
-Prior art
----------
+Related tools
+-------------
 
 - **Thegrideon QuickBooks Forensics**: a commercial read-only tool that parses the
-  ``.QBW`` and ``.QBB`` format directly. This library uses only its "SQL Anywhere
-  database UID & PWD Calculator", to get the blank-password credential.
-- **OpenQBW** (Sigilweaver): an open-source reader for the same format. Its
-  Python package backs the experimental ``openqbw`` backend.
+  ``.QBW`` and ``.QBB`` formats directly. This library uses only its "SQL Anywhere
+  database UID & PWD Calculator" to get the blank-password credential.
+- **OpenQBW** (Sigilweaver): an open-source reader for the same format. Its Python
+  package backs the experimental ``openqbw`` backend.
 - **OpenSQLAnywhere**: a clean-room reader for the SQL Anywhere page format.
 - **QBExtract** (MIT): uses the official QuickBooks SDK on a running company file,
   and exports curated entities as JSON.
-- **Intuit QuickBooks ODBC and Custom Reporting**: the supported route, but only
-  for Enterprise, and it needs QuickBooks running.
+- **Intuit QuickBooks ODBC and Custom Reporting**: the supported route, but only for
+  Enterprise, and it requires QuickBooks to be running.
 
 See ``docs/literature-review.md`` for the comparison that informed these features.
 
-Development
------------
+Development and tests
+---------------------
 
 .. code-block:: console
 
@@ -435,25 +436,26 @@ Development
     uv run pytest
     uv run ruff check . && uv run ruff format --check .
 
-The unit tests use fake source cursors and in-memory SQLite. They need no
-QuickBooks file and no SQL Anywhere install. The integration tests run the real
+The unit tests use fake source cursors and in-memory SQLite. They need neither a
+QuickBooks file nor a SQL Anywhere install. The integration tests run the real
 engine on a copy of the sample file in ``qb-sandbox/``. They run only when SQL
-Anywhere 17 is installed and both ``QBW_TEST_UID`` and ``QBW_TEST_PWD`` are set.
-The openqbw test runs only when ``openqbw`` is importable.
+Anywhere 17 is installed and both ``QBW_TEST_UID`` and ``QBW_TEST_PWD`` are set. The
+openqbw test runs only when ``openqbw`` is importable.
 
 Requirements
 ------------
 
 - **Windows** with **SQL Anywhere 17** for the ``sa`` backend.
-- **Python 3.9 or later.** The CI tests 3.9 and 3.15. Versions in between are
-  best effort. The core uses only the standard library.
+- **Python 3.9 or later.** CI tests 3.9 and 3.15. Versions in between are best
+  effort. The core uses only the standard library.
 - **Optional:** ``openqbw`` (Python 3.10+) for ``--backend openqbw``.
 
-The install folder is found from ``%ProgramFiles%``, ``%ProgramFiles(x86)%`` or
-``SQLANY17``. Override it with ``sa_dir`` or ``--sa-dir``.
+The library finds the install folder under ``%ProgramFiles%``,
+``%ProgramFiles(x86)%`` or ``SQLANY17``. Override it with ``sa_dir`` or
+``--sa-dir``.
 
-Changes
--------
+Changelog
+---------
 
 See ``CHANGELOG.rst``.
 
