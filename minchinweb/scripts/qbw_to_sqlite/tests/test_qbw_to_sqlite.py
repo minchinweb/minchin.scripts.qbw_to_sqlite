@@ -15,6 +15,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import re
 import sqlite3
 import sys
 import zlib
@@ -607,6 +608,45 @@ def test_cli_sa_backend_without_credentials_is_a_usage_error() -> None:
 
 def test_parse_where_lowercases_table() -> None:
     assert cli.parse_where("ABMC_Terms = x = 1") == ("abmc_terms", "x = 1")
+
+
+def _fake_report(tmp_path: Path, **extra) -> ConversionReport:
+    return ConversionReport(
+        output=tmp_path / "o.sqlite",
+        source_name="c.QBW",
+        source_kind="qbw",
+        backend="openqbw",
+        mode="replace",
+        **extra,
+    )
+
+
+def test_cli_prints_title_start_and_clock_done(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(cli, "convert", lambda *a, **k: _fake_report(tmp_path))
+    code = cli.main(["--qbw", "c.QBW", "--out", "o.sqlite", "--backend", "openqbw"])
+    assert code == cli.EXIT_OK
+    lines = capsys.readouterr().out.splitlines()
+    assert "qbw-to-sqlite" in lines[0]
+    assert "Convert a QuickBooks .QBW or .QBB company file to SQLite." in lines[1]
+    assert lines[2].startswith("[start] c.QBW -> o.sqlite")
+    assert re.search(r"\d{2}:\d{2}$", lines[2])
+    done = r"^\[done\] openqbw backend -> .*o\.sqlite\s*\d{2}:\d{2}$"
+    assert re.search(done, lines[-1])
+
+
+def test_cli_done_line_reports_problems_and_exit_3(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    report = _fake_report(tmp_path, problems=["QBAdminGroup.abmc_x: FAILED"])
+    monkeypatch.setattr(cli, "convert", lambda *a, **k: report)
+    code = cli.main(["--qbw", "c.QBW", "--out", "o.sqlite", "--backend", "openqbw"])
+    assert code == cli.EXIT_PROBLEMS
+    lines = capsys.readouterr().out.splitlines()
+    assert "[problem] QBAdminGroup.abmc_x: FAILED" in lines
+    assert "(finished with problems, exit status 3)" in lines[-1]
+    assert re.search(r"\d{2}:\d{2}$", lines[-1])
 
 
 # --------------------------------------------------------------------------- #

@@ -13,6 +13,9 @@ from collections.abc import Sequence
 import logging
 import sys
 
+import colorama
+from minchin.text import clock_on_right, subtitle, title
+
 from minchinweb.scripts.qbw_to_sqlite import (
     ConversionReport,
     QBWError,
@@ -134,18 +137,19 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _print_summary(report: ConversionReport) -> None:
+def _print_done(report: ConversionReport) -> None:
+    for problem in report.problems:
+        print(f"[problem] {problem}")
     if report.tables:
-        print(
-            f"\n[done] {len(report.tables)} tables, {report.rows_written} rows "
+        text = (
+            f"[done] {len(report.tables)} tables, {report.rows_written} rows "
             f"-> {report.output}"
         )
     else:
-        print(f"[done] {report.backend} backend -> {report.output}")
-    for problem in report.problems:
-        print(f"[problem] {problem}")
+        text = f"[done] {report.backend} backend -> {report.output}"
     if report.problems:
-        print("[done] Finished with problems. Exit status 3.")
+        text += " (finished with problems, exit status 3)"
+    clock_on_right(text)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -161,6 +165,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.backend == "sa" and not (args.uid and args.pwd):
         parser.error("the sa backend needs --uid and --pwd (see --help)")
+
+    # Turns on ANSI colour in the Windows console. Does nothing elsewhere.
+    colorama.just_fix_windows_console()
+    title(f"qbw-to-sqlite {__version__}")
+    subtitle(parser.description)
+    clock_on_right(f"[start] {args.qbw} -> {args.out}")
 
     # Progress goes to stdout, as the CLI always did. The handler is removed on
     # exit, so calling main() from another program leaves its logging alone.
@@ -200,7 +210,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         logger.removeHandler(handler)
         logger.setLevel(old_level)
 
-    _print_summary(report)
+    _print_done(report)
     return EXIT_PROBLEMS if report.problems else EXIT_OK
 
 

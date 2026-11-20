@@ -42,9 +42,12 @@ classifiers = [
   # full list at https://pypi.org/classifiers/
 ]
 # Direct (top-level) requirements only, with a minimum version. Exact versions
-# of everything, direct and indirect, live in `uv.lock`. Empty: the core is
-# standard library only.
-dependencies = []
+# of everything, direct and indirect, live in `uv.lock`. The conversion library
+# is standard library only; these two serve the command line.
+dependencies = [
+  "colorama >= 0.4.6",     # turns on colour codes in the Windows console
+  "minchin.text >= 7.0.0", # CLI title, subtitle and right-aligned clock
+]
 
 [project.optional-dependencies]
 # Used only by the experimental `openqbw` backend.
