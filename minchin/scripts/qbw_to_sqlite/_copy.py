@@ -8,13 +8,13 @@ import logging
 import sqlite3
 from typing import Any
 
-from minchinweb.scripts.qbw_to_sqlite._models import (
+from minchin.scripts.qbw_to_sqlite._models import (
     ColumnInfo,
     Options,
     TableResult,
     dst_name_for,
 )
-from minchinweb.scripts.qbw_to_sqlite._text import quote_ident, sqlite_value
+from minchin.scripts.qbw_to_sqlite._text import quote_ident, sqlite_value
 
 log = logging.getLogger(__name__)
 

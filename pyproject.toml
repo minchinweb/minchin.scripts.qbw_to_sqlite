@@ -4,7 +4,7 @@ requires = ["setuptools >= 77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "minchinweb.scripts.qbw-to-sqlite"
+name = "minchin.scripts.qbw-to-sqlite"
 description = "Convert QuickBooks Desktop .QBW and .QBB company files to SQLite."
 dynamic = ["version", "readme"]
 authors = [{ name = "William Minchin" }]
@@ -54,7 +54,7 @@ dependencies = [
 openqbw = ["openqbw >= 0.2.0; python_version >= '3.10'"]
 
 [project.scripts]
-qbw-to-sqlite = "minchinweb.scripts.qbw_to_sqlite.cli:main"
+qbw-to-sqlite = "minchin.scripts.qbw_to_sqlite.cli:main"
 
 [project.urls]
 # P6 asks for these. Add them once the repository has a home:
@@ -74,12 +74,12 @@ dev = [
 release = ["minchin.releaser >= 0.9.6"]
 
 [tool.setuptools.packages.find]
-# flat layout; tests live in the package (`minchinweb/scripts/qbw_to_sqlite/tests/`).
-# `minchinweb` and `minchinweb.scripts` are implicit (PEP 420) namespace
+# flat layout; tests live in the package (`minchin/scripts/qbw_to_sqlite/tests/`).
+# `minchin` and `minchin.scripts` are implicit (PEP 420) namespace
 # packages, so they have NO `__init__.py`.
-include = ["minchinweb*"]
+include = ["minchin*"]
 exclude = [
-  # top-level only; `minchinweb.<...>.tests` ships with the package
+  # top-level only; `minchin.<...>.tests` ships with the package
   "build",
   "dist",
   "docs",
@@ -92,13 +92,14 @@ exclude = [
 
 [tool.setuptools.dynamic]
 # the place the version is located via static analysis (a plain string literal)
-version = { attr = "minchinweb.scripts.qbw_to_sqlite._version.__version__" }
+version = { attr = "minchin.scripts.qbw_to_sqlite._version.__version__" }
 readme = { file = ["README.rst"], content-type = "text/x-rst" }
 
 [tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
+# Not `--import-mode=importlib`: it shadows the shared `minchin` namespace
+# (minchin-text, minchin-tasks, ...), so `minchin.text` stops resolving.
 # tests ship inside the package
-testpaths = ["minchinweb"]
+testpaths = ["minchin"]
 
 [tool.ruff]
 line-length = 88
@@ -153,7 +154,7 @@ min-file-size = 1024
 [tool.ruff.lint.isort]
 # Sort imports within their section independent of the import type
 force-sort-within-sections = true
-known-first-party = ["minchinweb"]
+known-first-party = ["minchin"]
 # Rule I002; `--fix` adds it. Empty files are skipped.
 required-imports = ["from __future__ import annotations"]
 # Framework sections are standard boilerplate; an unused one costs nothing.

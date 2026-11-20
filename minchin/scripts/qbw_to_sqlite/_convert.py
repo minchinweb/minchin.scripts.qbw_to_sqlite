@@ -20,30 +20,30 @@ import tempfile
 from typing import TYPE_CHECKING, Any
 import uuid
 
-from minchinweb.scripts.qbw_to_sqlite._catalog import list_user_tables, load_column_info
-from minchinweb.scripts.qbw_to_sqlite._copy import copy_table
-from minchinweb.scripts.qbw_to_sqlite._engine import (
+from minchin.scripts.qbw_to_sqlite._catalog import list_user_tables, load_column_info
+from minchin.scripts.qbw_to_sqlite._copy import copy_table
+from minchin.scripts.qbw_to_sqlite._engine import (
     SQLAnywhereEngine,
     connect,
     find_sqlany_dir,
 )
-from minchinweb.scripts.qbw_to_sqlite._errors import QBWError
-from minchinweb.scripts.qbw_to_sqlite._models import (
+from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._models import (
     PROBLEM_STATUSES,
     ColumnInfo,
     ConversionReport,
     Options,
     TableResult,
 )
-from minchinweb.scripts.qbw_to_sqlite._openqbw import run_openqbw_backend
-from minchinweb.scripts.qbw_to_sqlite._provenance import write_provenance
-from minchinweb.scripts.qbw_to_sqlite._qbb import (
+from minchin.scripts.qbw_to_sqlite._openqbw import run_openqbw_backend
+from minchin.scripts.qbw_to_sqlite._provenance import write_provenance
+from minchin.scripts.qbw_to_sqlite._qbb import (
     extract_company_file,
     is_qbb,
     sha256_file,
 )
-from minchinweb.scripts.qbw_to_sqlite._version import __version__
-from minchinweb.scripts.qbw_to_sqlite._views import create_views
+from minchin.scripts.qbw_to_sqlite._version import __version__
+from minchin.scripts.qbw_to_sqlite._views import create_views
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping

@@ -7,7 +7,7 @@ import hashlib
 from pathlib import Path
 import zlib
 
-from minchinweb.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import QBWError
 
 QBB_MARKER = b"Compression_Format=Deflate_ZLIB;"
 SA_MAGIC = b"\x5e\xba\x7a\xda"  # superblock magic of a SQL Anywhere file

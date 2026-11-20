@@ -7,7 +7,7 @@ import json
 import sqlite3
 from typing import Any
 
-from minchinweb.scripts.qbw_to_sqlite._models import ColumnInfo, TableResult
+from minchin.scripts.qbw_to_sqlite._models import ColumnInfo, TableResult
 
 MAX_REJECT_ROWS_LOGGED = 10000
 

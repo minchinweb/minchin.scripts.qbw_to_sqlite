@@ -978,7 +978,7 @@ wheels = [
 ]
 
 [[package]]
-name = "minchinweb-scripts-qbw-to-sqlite"
+name = "minchin-scripts-qbw-to-sqlite"
 source = { editable = "." }
 dependencies = [
     { name = "colorama" },

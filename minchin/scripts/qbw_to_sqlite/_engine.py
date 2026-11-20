@@ -14,7 +14,7 @@ import time
 from types import ModuleType
 from typing import Any
 
-from minchinweb.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import QBWError
 
 log = logging.getLogger(__name__)
 

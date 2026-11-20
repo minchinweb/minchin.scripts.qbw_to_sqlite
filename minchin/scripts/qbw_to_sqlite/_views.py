@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import sqlite3
 
-from minchinweb.scripts.qbw_to_sqlite._catalog import DEFAULT_OWNER_PREFIX
-from minchinweb.scripts.qbw_to_sqlite._models import dst_name_for
-from minchinweb.scripts.qbw_to_sqlite._text import quote_ident
+from minchin.scripts.qbw_to_sqlite._catalog import DEFAULT_OWNER_PREFIX
+from minchin.scripts.qbw_to_sqlite._models import dst_name_for
+from minchin.scripts.qbw_to_sqlite._text import quote_ident
 
 # Each view needs the listed source tables (names without the owner prefix).
 VIEW_DEFS: list[tuple[str, tuple[str, ...], str]] = [

@@ -10,8 +10,8 @@ from pathlib import Path
 import sqlite3
 import warnings
 
-from minchinweb.scripts.qbw_to_sqlite._errors import QBWError
-from minchinweb.scripts.qbw_to_sqlite._text import quote_ident
+from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._text import quote_ident
 
 log = logging.getLogger(__name__)
 

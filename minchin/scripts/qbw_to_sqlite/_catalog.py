@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from minchinweb.scripts.qbw_to_sqlite._models import ColumnInfo
+from minchin.scripts.qbw_to_sqlite._models import ColumnInfo
 
 # SQL Anywhere system schema owners that are never exported.
 SYSTEM_OWNERS = frozenset(

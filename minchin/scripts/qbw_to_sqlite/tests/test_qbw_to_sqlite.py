@@ -22,7 +22,7 @@ import zlib
 
 import pytest
 
-from minchinweb.scripts.qbw_to_sqlite import (
+from minchin.scripts.qbw_to_sqlite import (
     ConversionReport,
     QBWError,
     TableResult,
@@ -38,7 +38,7 @@ from minchinweb.scripts.qbw_to_sqlite import (
     convert,
 )
 
-# tests/ -> qbw_to_sqlite/ -> scripts/ -> minchinweb/ -> repository root
+# tests/ -> qbw_to_sqlite/ -> scripts/ -> minchin/ -> repository root
 ROOT = Path(__file__).resolve().parents[4]
 SAMPLE = ROOT / "qb-sandbox" / "Sample Company.QBW"
 

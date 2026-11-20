@@ -14,21 +14,21 @@ import logging
 import sys
 
 import colorama
-from minchin.text import clock_on_right, subtitle, title
 
-from minchinweb.scripts.qbw_to_sqlite import (
+from minchin.scripts.qbw_to_sqlite import (
     ConversionReport,
     QBWError,
     __version__,
     convert,
 )
+from minchin.text import clock_on_right, subtitle, title
 
 EXIT_OK = 0
 EXIT_FATAL = 1
 EXIT_USAGE = 2
 EXIT_PROBLEMS = 3
 
-LOGGER_NAME = "minchinweb.scripts.qbw_to_sqlite"
+LOGGER_NAME = "minchin.scripts.qbw_to_sqlite"
 
 
 def parse_where(text: str) -> tuple[str, str]:

@@ -12,7 +12,7 @@ neither the QuickBooks application nor the Intuit SDK.
     perform. It does not crack or recover unknown passwords. It relies on a
     QuickBooks user *you* create with no password.
 
-The package is ``minchinweb.scripts.qbw_to_sqlite``. It is a library first. The
+The package is ``minchin.scripts.qbw_to_sqlite``. It is a library first. The
 ``qbw-to-sqlite`` command wraps the same API.
 
 Install
@@ -20,8 +20,8 @@ Install
 
 .. code-block:: console
 
-    pip install minchinweb.scripts.qbw-to-sqlite
-    pip install "minchinweb.scripts.qbw-to-sqlite[openqbw]"   # optional backend
+    pip install minchin.scripts.qbw-to-sqlite
+    pip install "minchin.scripts.qbw-to-sqlite[openqbw]"   # optional backend
 
 The default ``sa`` backend needs **SQL Anywhere 17** on Windows. The package does
 not install it. SAP offers the Developer Edition free of charge.
@@ -31,7 +31,7 @@ Use as a library
 
 .. code-block:: python
 
-    from minchinweb.scripts.qbw_to_sqlite import QBWError, convert
+    from minchin.scripts.qbw_to_sqlite import QBWError, convert
 
     try:
         report = convert(
@@ -60,7 +60,7 @@ argument, such as ``mode="append"``. A report with problems still means the
 conversion finished, so check ``report.ok``.
 
 Logging uses the standard ``logging`` module, under the logger
-``minchinweb.scripts.qbw_to_sqlite``. The library attaches no handler and configures
+``minchin.scripts.qbw_to_sqlite``. The library attaches no handler and configures
 no logging, so importing it changes nothing in the process.
 
 The docstring of ``convert`` lists every argument.
@@ -75,7 +75,7 @@ Command line
 
 From a checkout, run ``python qbw_to_sqlite.py`` with the same arguments, without
 installing. The command line uses the public API, so
-``minchinweb/scripts/qbw_to_sqlite/cli.py`` shows how to call the library.
+``minchin/scripts/qbw_to_sqlite/cli.py`` shows how to call the library.
 
 .. list-table::
    :header-rows: 1

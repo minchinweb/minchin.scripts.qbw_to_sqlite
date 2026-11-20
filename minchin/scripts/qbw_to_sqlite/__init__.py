@@ -3,7 +3,7 @@
 
 Example::
 
-    from minchinweb.scripts.qbw_to_sqlite import convert
+    from minchin.scripts.qbw_to_sqlite import convert
 
     report = convert("Company.QBW", "company.sqlite", uid="6265...", pwd="07...")
     if not report.ok:
@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import logging
 
-from minchinweb.scripts.qbw_to_sqlite._convert import convert
-from minchinweb.scripts.qbw_to_sqlite._errors import QBWError
-from minchinweb.scripts.qbw_to_sqlite._models import ConversionReport, TableResult
-from minchinweb.scripts.qbw_to_sqlite._version import __version__
+from minchin.scripts.qbw_to_sqlite._convert import convert
+from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._models import ConversionReport, TableResult
+from minchin.scripts.qbw_to_sqlite._version import __version__
 
 # A library must not configure logging. Silence "no handler" warnings unless
 # the caller attaches one.
