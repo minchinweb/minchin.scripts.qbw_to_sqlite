@@ -22,3 +22,11 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
+
+# Build and tooling output
+build/
+dist/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/

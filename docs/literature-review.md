@@ -88,3 +88,29 @@ Listed in rough priority order. Each item names the source it came from.
 3. Read declared types and primary keys from the catalog (item 5). This is the foundation for typed output and incremental merges.
 4. Decide whether the raw dump is the deliverable, or whether an entity-level export (item 8) is also needed for the intended use.
 5. Add `.QBB` support, probably by reusing OpenQBW's approach (item 11), once there is a sample to test against.
+
+## Implementation status
+
+Status as of 2026-11-20, on branch `feat/extractor-hardening` (uncommitted). Each
+item is numbered as in the findings above.
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 1 | Honest exit status | Done | Exit 3 when any table is a problem. Exit 1 for fatal errors |
+| 2 | Atomic output | Done | Written to a temp file, then renamed. Refuses QuickBooks files as output |
+| 3 | Chain of custody | Done | SHA-256 of the source and of the working copy, in `_qbw_meta` |
+| 4 | Provenance tables | Done | `_qbw_meta`, `_qbw_tables`, `_qbw_columns`, `_qbw_rejected` |
+| 5 | Declared types and primary keys | Done | From `SYS.SYSCOLUMN`. Unique index `<table>__pk` |
+| 6 | Read-back verification | Partly | Row counts checked against `COUNT(*)`. Page CRC not implemented: no verified spec |
+| 7 | Lenient and strict modes | Done | Lenient logs bad rows and continues. `--strict` aborts the table |
+| 8 | Entity-level export | Partly | Views for invoices (with lines), customers, items and accounts. Other transaction types not yet |
+| 9 | Incremental merge | Done | `--mode merge` upserts by primary key. Deletions not detected |
+| 10 | Chunking, limits, filters | Done | `--tables`, `--exclude`, `--limit`, `--where`, `--batch-size` |
+| 11 | `.QBB` backup support | Done, untested on a real backup | Synthetic container test only |
+| 12 | No-login path | Experimental | `--backend openqbw`. Returned no transactions or line items on the sample |
+| 13 | Corrupt-file handling | Partly | A failed table is `PARTIAL` and keeps the rows read so far. No record-level resume |
+| 14 | AI-agent redaction and audit log | Not implemented | Out of scope for an extractor. Provenance (item 4) covers the audit trail |
+
+Verification: the converter on the sample file gives the same row count as the
+original output for all 297 tables. All 32 unit and integration tests pass, and
+ruff lint and format are clean.
