@@ -87,13 +87,13 @@ library.
    * - ``--qbw``
      - ``.QBW`` or ``.QBB`` company file. Read only, copied, never modified.
    * - ``--out``
-     - SQLite file to create. Refused if it is a QuickBooks file. Replaced atomically.
+     - SQLite file to create. Refused if it is a QuickBooks file. Replaced atomically, also when the run finishes with problems.
    * - ``--backend``
      - ``sa`` (default) or ``openqbw`` (experimental).
    * - ``--uid`` / ``--pwd``
      - SQL Anywhere credential (``sa`` backend).
    * - ``--mode``
-     - ``replace`` (default): fresh output. ``merge``: upsert by primary key.
+     - ``replace`` (default): build a fresh output and overwrite the old one. ``merge``: upsert by primary key into the existing output. Deleted rows are kept, and tables without a primary key gain duplicates. See `Re-running on an updated file`_.
    * - ``--tables PATTERN``
      - Only tables matching a glob. Matches ``table`` or ``owner.table``. Repeatable.
    * - ``--exclude PATTERN``
@@ -338,13 +338,39 @@ creation, and is dropped and reported as skipped if it does not query.
 Only invoices are covered so far. Bills, checks, sales receipts, payments and
 journal entries need the same kind of join, verified against data first.
 
-Merge mode
-~~~~~~~~~~
+Re-running on an updated file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``mode="merge"`` (``--mode merge``) starts from the existing output and upserts
-each table by its primary key. A run repeated on an unchanged file gives the same
-counts. Rows **deleted** in QuickBooks are **not** removed from the output,
-because the tool reads full tables and does not detect deletions.
+What happens when you run the conversion again with an existing ``--out`` file
+depends on ``--mode``. The default is ``replace``.
+
+``replace`` (default)
+    Builds a new output from the current company file, then renames it over the
+    old file. The old file is not read, compared or kept. If the run finishes with
+    problems (exit status 3), the new output still replaces the old one. A fatal
+    error leaves the old file untouched. To keep earlier exports, give each run its
+    own name, for example ``--out your_company_2026-11-20.sqlite``, and compare the
+    snapshots.
+
+``merge`` (``--mode merge``)
+    Starts from the existing output and upserts each selected table by primary key.
+
+    - Rows that changed in QuickBooks are overwritten, and new rows are added. For
+      tables with a primary key, a repeat run on an unchanged file gives the same
+      counts.
+    - Rows **deleted** in QuickBooks are **not** removed. The tool reads full tables
+      and does not detect deletions.
+    - A table whose column names have changed is dropped and recreated from the new
+      file, so its earlier rows are lost. Its note reads ``recreated: columns changed
+      since last run``.
+    - Tables not selected on the run are left as they were.
+    - **Tables with no primary key gain duplicate rows on every run.** Only keyed
+      tables are upserted. In a test, two identical merges of a two-row keyless
+      table gave four rows. Do not use merge on a dataset that includes keyless
+      tables until this is fixed.
+    - The ``_qbw_*`` provenance tables are rebuilt on each run, so they describe only
+      the latest run. The output does not record which run wrote which row, and
+      nothing checks that the new company file is the same one as before.
 
 Text encoding
 -------------
