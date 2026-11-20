@@ -178,7 +178,8 @@ def copy_table(
         ):
             res.status = "MISMATCH"
             res.note = (
-                f"read {res.rows_read} of {res.source_rows}; sqlite has {dst_count}"
+                f"read {res.rows_read} of {res.source_rows} source rows; "
+                f"SQLite has {dst_count}"
             )
         elif res.rejects:
             res.status = "REJECTED_ROWS"

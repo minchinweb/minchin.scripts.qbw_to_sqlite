@@ -35,7 +35,7 @@ def parse_where(text: str) -> tuple[str, str]:
         argparse.ArgumentTypeError: The text has no ``=``.
     """
     if "=" not in text:
-        raise argparse.ArgumentTypeError(f"needs TABLE=PREDICATE, got: {text}")
+        raise argparse.ArgumentTypeError(f"expected TABLE=PREDICATE, got {text!r}")
     table, predicate = text.split("=", 1)
     return table.strip().lower(), predicate.strip()
 
@@ -55,24 +55,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         choices=["sa", "openqbw"],
         default="sa",
-        help="sa: SQL Anywhere engine (needs --uid/--pwd). "
-        "openqbw: experimental, no login, partial output",
+        help="sa: SQL Anywhere engine; needs --uid and --pwd. "
+        "openqbw: experimental; no login; catalog, indexes, transactions and "
+        "line items only",
     )
     p.add_argument(
         "--uid", help="SQL Anywhere UID (hex user name, e.g. 6265616e636f756e74)"
     )
-    p.add_argument("--pwd", help="SQL Anywhere PWD (long hex string)")
+    p.add_argument("--pwd", help="SQL Anywhere PWD (hex, about 68 characters)")
     p.add_argument(
         "--mode",
         choices=["replace", "merge"],
         default="replace",
-        help="replace: fresh output. merge: upsert by primary key",
+        help="replace: rebuild the output. merge: upsert by primary key; "
+        "deleted rows are kept",
     )
     p.add_argument(
         "--tables",
         action="append",
         metavar="PATTERN",
-        help="Only these tables (glob, matched as table or owner.table; repeatable)",
+        help="Copy only tables matching this glob (table or owner.table; repeatable)",
     )
     p.add_argument(
         "--exclude",
@@ -84,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit",
         type=int,
         default=None,
-        help="Copy at most this many rows per table (no count check)",
+        help="Copy at most this many rows per table. Skips the count check.",
     )
     p.add_argument(
         "--where",
@@ -92,18 +94,19 @@ def build_parser() -> argparse.ArgumentParser:
         type=parse_where,
         metavar="TABLE=PREDICATE",
         help="SQL WHERE clause for one table, e.g. "
-        "abmc_invoice_header=\"transaction_date >= '2024-01-01'\" (repeatable)",
+        "abmc_invoice_header=\"transaction_date >= '2024-01-01'\" (repeatable). "
+        "Passed to SQL Anywhere unchanged, so use trusted input only",
     )
     p.add_argument("--batch-size", type=int, default=2000, help="Rows per insert batch")
     p.add_argument(
         "--strict",
         action="store_true",
-        help="Abort a table on its first bad row instead of skipping that row",
+        help="Abort a table at its first bad row instead of skipping it",
     )
     p.add_argument(
         "--sa-dir",
         default=None,
-        help="SQL Anywhere 17 install dir (auto-detected if omitted)",
+        help="SQL Anywhere 17 install folder (found automatically if omitted)",
     )
     p.add_argument(
         "--port",
@@ -112,17 +115,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Private TCP port for the temporary engine",
     )
     p.add_argument(
-        "--server", default="QBW2SQLITE", help="Temporary engine (server) name"
+        "--server", default="QBW2SQLITE", help="Name of the temporary engine"
     )
     p.add_argument(
         "--work-dir",
         default=None,
-        help="Where to put the temp company file copy (default: system temp)",
+        help="Folder for the temporary working copy. Uses the system temp folder "
+        "if omitted.",
     )
     p.add_argument(
         "--keep-copy",
         action="store_true",
-        help="Keep the temporary company file copy on exit",
+        help="Keep the working copy and engine log on exit",
     )
     p.add_argument(
         "--version", action="version", version=f"qbw-to-sqlite {__version__}"
@@ -141,7 +145,7 @@ def _print_summary(report: ConversionReport) -> None:
     for problem in report.problems:
         print(f"[problem] {problem}")
     if report.problems:
-        print(f"[done] {len(report.problems)} problem(s). Exit status 3.")
+        print("[done] Finished with problems. Exit status 3.")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

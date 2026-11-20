@@ -1,17 +1,18 @@
 # Copyright (c) 2026 William Minchin
 """Tests for the qbw_to_sqlite library and its command line.
 
-Unit tests use fake source cursors and in-memory SQLite, so they need no
-QuickBooks file and no SQL Anywhere install. The integration tests run the real
-engine on a copy of the sample company file. They are skipped unless SQL
-Anywhere 17 is installed, the sample is present, and the environment variables
-QBW_TEST_UID and QBW_TEST_PWD are set.
+The unit tests use fake source cursors and in-memory SQLite, so they need no
+QuickBooks file and no SQL Anywhere install. The engine integration tests run
+the real engine on a copy of the sample company file. They are skipped unless
+SQL Anywhere 17 is installed, the sample is present, and the environment
+variables QBW_TEST_UID and QBW_TEST_PWD are set.
 """
 
 from __future__ import annotations
 
 import decimal
 import hashlib
+import logging
 import os
 from pathlib import Path
 import sqlite3
@@ -25,6 +26,7 @@ from minchinweb.scripts.qbw_to_sqlite import (
     QBWError,
     TableResult,
     _catalog,
+    _convert,
     _copy,
     _engine,
     _models,
@@ -110,44 +112,48 @@ def _count(conn: sqlite3.Connection, table: str) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# Types and text
+# Column types and text decoding
 # --------------------------------------------------------------------------- #
 
 
-def test_integer_domains() -> None:
+def test_integer_domains_map_to_integer() -> None:
     for d in ("integer", "smallint", "bigint", "bit", "unsigned int"):
         assert _models.sqlite_affinity(d) == "INTEGER", d
 
 
-def test_decimal_is_text_so_money_stays_exact() -> None:
+def test_decimal_and_numeric_map_to_text_so_money_stays_exact() -> None:
     # NUMERIC affinity would turn "12.50" into a float.
     assert _models.sqlite_affinity("decimal") == "TEXT"
     assert _models.sqlite_affinity("numeric") == "TEXT"
 
 
-def test_real_blob_and_unknown() -> None:
+def test_float_binary_and_unknown_domains() -> None:
     assert _models.sqlite_affinity("double") == "REAL"
     assert _models.sqlite_affinity("long binary") == "BLOB"
     assert _models.sqlite_affinity("st_geometry") == ""
     assert _models.sqlite_affinity(None) == ""
 
 
-def test_utf8_bytes_recovered() -> None:
+def test_utf8_bytes_are_recovered() -> None:
     raw = "Kč €".encode()
     assert _text.fix_text(raw.decode("latin-1")) == "Kč €"
 
 
-def test_cp1252_bytes_recovered() -> None:
+def test_cp1252_bytes_are_recovered() -> None:
     raw = "Québec".encode("cp1252")
     assert _text.fix_text(raw.decode("latin-1")) == "Québec"
 
 
-def test_decimal_kept_as_exact_text() -> None:
+def test_decimal_value_keeps_exact_text() -> None:
     assert _text.sqlite_value(decimal.Decimal("12.50")) == "12.50"
 
 
+def test_quote_ident_doubles_quotes() -> None:
+    assert _text.quote_ident('a"b') == '"a""b"'
+
+
 # --------------------------------------------------------------------------- #
-# Selection
+# Table selection
 # --------------------------------------------------------------------------- #
 
 
@@ -163,13 +169,13 @@ def test_owner_qualified_pattern() -> None:
     assert not o.selected("OTHER", "abmc_terms")
 
 
-def test_exclude_wins_when_no_includes() -> None:
+def test_exclude_skips_matching_tables() -> None:
     o = _opts(excludes=["perf_*"])
     assert not o.selected("QBAdminGroup", "perf_x")
     assert o.selected("QBAdminGroup", "abmc_x")
 
 
-def test_where_lookup_by_table_name() -> None:
+def test_where_is_looked_up_by_table_name() -> None:
     o = _opts(where={"abmc_invoice_header": "transaction_id < 5"})
     assert o.where_for("QBAdminGroup", "abmc_invoice_header") == "transaction_id < 5"
     assert o.where_for("QBAdminGroup", "abmc_terms") is None
@@ -258,7 +264,8 @@ def test_merge_upserts_by_key_and_keeps_other_rows(dst) -> None:
     assert rows == [(1, "new"), (2, "keep"), (3, "added")]
 
 
-def _reject_trigger_setup(dst) -> list[_models.ColumnInfo]:
+def _merge_table_with_reject_trigger(dst) -> list[_models.ColumnInfo]:
+    """Seed a merge table, then reject any later row whose name is 'bad'."""
     cols = [
         _models.ColumnInfo("id", "integer", 4, 0, False, True),
         _models.ColumnInfo("name", "varchar", 20, 0, True, False),
@@ -278,8 +285,8 @@ def _reject_trigger_setup(dst) -> list[_models.ColumnInfo]:
     return cols
 
 
-def test_rejected_rows_are_logged_and_others_kept(dst) -> None:
-    cols = _reject_trigger_setup(dst)
+def test_rejected_rows_are_reported_and_others_kept(dst) -> None:
+    cols = _merge_table_with_reject_trigger(dst)
     src = FakeCursor(rows=[(2, "good"), (3, "bad"), (4, "good2")])
     res = _copy.copy_table(
         src, dst, "QBAdminGroup", "abmc_t", cols, _opts(mode="merge")
@@ -293,7 +300,7 @@ def test_rejected_rows_are_logged_and_others_kept(dst) -> None:
 
 
 def test_strict_aborts_table_on_first_bad_row(dst) -> None:
-    cols = _reject_trigger_setup(dst)
+    cols = _merge_table_with_reject_trigger(dst)
     src = FakeCursor(rows=[(2, "good"), (3, "bad"), (4, "good2")])
     res = _copy.copy_table(
         src, dst, "QBAdminGroup", "abmc_t", cols, _opts(mode="merge", strict=True)
@@ -305,7 +312,7 @@ def test_strict_aborts_table_on_first_bad_row(dst) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Views
+# Entity views
 # --------------------------------------------------------------------------- #
 
 
@@ -330,7 +337,7 @@ def test_views_created_when_sources_present(dst) -> None:
     assert any(s.startswith("v_items") for s in skipped)
 
 
-def test_view_with_missing_column_is_dropped_not_reported_created(dst) -> None:
+def test_view_with_missing_column_is_skipped(dst) -> None:
     # Regression: SQLite accepts CREATE VIEW with unknown columns; the view must
     # be validated and reported as skipped.
     _make_table(
@@ -365,7 +372,7 @@ def test_view_with_missing_column_is_dropped_not_reported_created(dst) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# QBB containers and hashing
+# QBB backups and file hashing
 # --------------------------------------------------------------------------- #
 
 
@@ -381,7 +388,7 @@ def test_extracts_company_file_from_container(tmp_path: Path) -> None:
     assert out.read_bytes() == company
 
 
-def test_no_marker_is_fatal(tmp_path: Path) -> None:
+def test_missing_marker_is_a_qbw_error(tmp_path: Path) -> None:
     qbb = tmp_path / "x.qbb"
     qbb.write_bytes(b"not a backup")
     with pytest.raises(QBWError):
@@ -413,7 +420,7 @@ def test_sha256_matches_hashlib(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Library behaviour: no global side effects, clear errors
+# Library: side effects and error handling
 # --------------------------------------------------------------------------- #
 
 
@@ -437,17 +444,24 @@ def test_missing_sa_install_is_a_qbw_error(tmp_path: Path, monkeypatch) -> None:
         _engine.find_sqlany_dir(tmp_path / "nowhere")
 
 
-def test_missing_company_file_is_qbw_error(tmp_path: Path) -> None:
+def test_missing_company_file_is_a_qbw_error(tmp_path: Path) -> None:
     with pytest.raises(QBWError, match="not found"):
         convert(tmp_path / "nope.QBW", tmp_path / "o.sqlite", uid="x", pwd="y")
 
 
-def test_refuses_to_write_output_over_quickbooks_file(tmp_path: Path) -> None:
+def test_refuses_to_overwrite_the_company_file(tmp_path: Path) -> None:
     src = tmp_path / "co.QBW"
     src.write_bytes(_sa_company_bytes())
     with pytest.raises(QBWError, match="refusing"):
         convert(src, src, uid="x", pwd="y")
     assert src.read_bytes() == _sa_company_bytes()
+
+
+def test_refuses_output_with_a_quickbooks_extension(tmp_path: Path) -> None:
+    src = tmp_path / "co.QBW"
+    src.write_bytes(_sa_company_bytes())
+    with pytest.raises(QBWError, match="QuickBooks extension"):
+        convert(src, tmp_path / "other.qbb", uid="x", pwd="y")
 
 
 @pytest.mark.parametrize(
@@ -489,6 +503,52 @@ def test_report_ok_follows_problems() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Progress lines
+# --------------------------------------------------------------------------- #
+
+
+def _progress_line(caplog, res: TableResult) -> str:
+    with caplog.at_level(logging.INFO, logger=_convert.log.name):
+        _convert._log_table(1, 1, res)
+    return caplog.messages[-1]
+
+
+def test_progress_line_for_clean_table(caplog) -> None:
+    res = TableResult("QBAdminGroup", "abmc_x", "QBAdminGroup_abmc_x", rows_written=5)
+    res.status = "OK"
+    assert _progress_line(caplog, res).endswith("QBAdminGroup.abmc_x: 5 rows")
+
+
+def test_progress_line_gives_the_reason_for_a_mismatch(caplog) -> None:
+    res = TableResult("QBAdminGroup", "abmc_y", "QBAdminGroup_abmc_y", rows_written=10)
+    res.status = "MISMATCH"
+    res.note = "read 10 of 12 source rows; SQLite has 10"
+    assert _progress_line(caplog, res).endswith(
+        "QBAdminGroup.abmc_y: 10 rows, MISMATCH: read 10 of 12 source rows; "
+        "SQLite has 10"
+    )
+
+
+def test_progress_line_counts_rejected_rows(caplog) -> None:
+    res = TableResult("QBAdminGroup", "abmc_r", "QBAdminGroup_abmc_r", rows_written=3)
+    res.status = "REJECTED_ROWS"
+    res.rejects = [(1, "bad"), (2, "bad")]
+    assert _progress_line(caplog, res).endswith(
+        "QBAdminGroup.abmc_r: 3 rows, REJECTED_ROWS (2 rejected)"
+    )
+
+
+def test_progress_line_survives_an_empty_error(caplog) -> None:
+    # An empty error message once raised IndexError and aborted the run.
+    res = TableResult("QBAdminGroup", "abmc_z", "QBAdminGroup_abmc_z")
+    res.status = "FAILED"
+    res.error = ""
+    assert _progress_line(caplog, res).endswith(
+        "QBAdminGroup.abmc_z: 0 rows, FAILED: unknown error"
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Command line
 # --------------------------------------------------------------------------- #
 
@@ -519,7 +579,7 @@ def test_cli_bad_limit_is_a_usage_error(capsys) -> None:
     assert "limit must be at least 1" in capsys.readouterr().err
 
 
-def test_cli_where_needs_equals(capsys) -> None:
+def test_cli_where_without_equals_is_a_usage_error(capsys) -> None:
     with pytest.raises(SystemExit) as exc:
         cli.main(
             [
@@ -536,9 +596,10 @@ def test_cli_where_needs_equals(capsys) -> None:
             ]
         )
     assert exc.value.code == cli.EXIT_USAGE
+    assert "expected TABLE=PREDICATE, got 'abmc_terms'" in capsys.readouterr().err
 
 
-def test_cli_sa_backend_needs_credentials(capsys) -> None:
+def test_cli_sa_backend_without_credentials_is_a_usage_error() -> None:
     with pytest.raises(SystemExit) as exc:
         cli.main(["--qbw", "x", "--out", "y"])
     assert exc.value.code == cli.EXIT_USAGE
@@ -549,7 +610,43 @@ def test_parse_where_lowercases_table() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Engine integration (skipped unless the environment is set up)
+# openqbw backend (optional)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.skipif(not SAMPLE.exists(), reason="needs the sample company file")
+def test_openqbw_backend_writes_catalog_and_provenance(tmp_path: Path) -> None:
+    pytest.importorskip("openqbw")
+    out = tmp_path / "ob.sqlite"
+    report = convert(SAMPLE, out, backend="openqbw", work_dir=tmp_path)
+    assert report.tables == []
+    c = sqlite3.connect(str(out))
+    try:
+        assert c.execute("SELECT COUNT(*) FROM _openqbw_tables").fetchone()[0] > 0
+        # Empty result sets keep their columns, so this query must not fail.
+        c.execute("SELECT COUNT(*) FROM _openqbw_transactions").fetchone()
+        assert (
+            c.execute(
+                "SELECT value FROM _qbw_meta WHERE key='source_sha256'"
+            ).fetchone()
+            is not None
+        )
+    finally:
+        c.close()
+
+
+# --------------------------------------------------------------------------- #
+# Catalog
+# --------------------------------------------------------------------------- #
+
+
+def test_catalog_system_owners_are_excluded() -> None:
+    assert "SYS" in _catalog.SYSTEM_OWNERS
+    assert _catalog.DEFAULT_OWNER_PREFIX not in _catalog.SYSTEM_OWNERS
+
+
+# --------------------------------------------------------------------------- #
+# Engine integration tests (need SQL Anywhere 17 and the sample file)
 # --------------------------------------------------------------------------- #
 
 
@@ -615,33 +712,3 @@ def test_engine_run_leaves_process_environment_unchanged(tmp_path: Path) -> None
     )
     assert os.environ.get("SQLANY_API_DLL") == env_before.get("SQLANY_API_DLL")
     assert os.environ.get("PATH") == env_before.get("PATH")
-
-
-@pytest.mark.skipif(not SAMPLE.exists(), reason="needs the sample company file")
-def test_openqbw_backend_writes_catalog_and_provenance(tmp_path: Path) -> None:
-    pytest.importorskip("openqbw")
-    out = tmp_path / "ob.sqlite"
-    report = convert(SAMPLE, out, backend="openqbw", work_dir=tmp_path)
-    assert report.tables == []
-    c = sqlite3.connect(str(out))
-    try:
-        assert c.execute("SELECT COUNT(*) FROM _openqbw_tables").fetchone()[0] > 0
-        # Empty result sets keep their columns, so this query must not fail.
-        c.execute("SELECT COUNT(*) FROM _openqbw_transactions").fetchone()
-        assert (
-            c.execute(
-                "SELECT value FROM _qbw_meta WHERE key='source_sha256'"
-            ).fetchone()
-            is not None
-        )
-    finally:
-        c.close()
-
-
-def test_catalog_system_owners_are_excluded() -> None:
-    assert "SYS" in _catalog.SYSTEM_OWNERS
-    assert _catalog.DEFAULT_OWNER_PREFIX not in _catalog.SYSTEM_OWNERS
-
-
-def test_quote_ident_doubles_quotes() -> None:
-    assert _text.quote_ident('a"b') == '"a""b"'

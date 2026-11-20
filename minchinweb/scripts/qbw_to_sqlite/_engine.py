@@ -48,8 +48,8 @@ def find_sqlany_dir(explicit: str | os.PathLike[str] | None) -> Path:
         if (c / "Bin64" / "dbeng17.exe").exists():
             return c
     raise QBWError(
-        "Could not find 'SQL Anywhere 17' (Bin64\\dbeng17.exe). Install it, or pass "
-        'sa_dir (--sa-dir) as "C:\\Program Files\\SQL Anywhere 17".'
+        "cannot find SQL Anywhere 17 (Bin64\\dbeng17.exe). Install it, or pass "
+        'sa_dir (--sa-dir), e.g. "C:\\Program Files\\SQL Anywhere 17".'
     )
 
 
@@ -77,7 +77,7 @@ def sqlany_driver(sa_dir: Path) -> Iterator[ModuleType]:
     sdk_py = sa_dir / "SDK" / "Python"
     dbcapi = bin64 / "dbcapi.dll"
     if not dbcapi.exists():
-        raise QBWError(f"dbcapi.dll not found at {dbcapi}")
+        raise QBWError(f"cannot find dbcapi.dll at {dbcapi}")
     changes = {
         "SQLANY_API_DLL": str(dbcapi),
         "PATH": str(bin64) + os.pathsep + os.environ.get("PATH", ""),
@@ -95,7 +95,7 @@ def sqlany_driver(sa_dir: Path) -> Iterator[ModuleType]:
             import sqlanydb  # type: ignore[import-not-found]
         except Exception as exc:
             raise QBWError(
-                f"could not import 'sqlanydb' (looked in {sdk_py}): {exc!r}"
+                f"cannot import 'sqlanydb' (looked in {sdk_py}): {exc}"
             ) from exc
         yield sqlanydb
     finally:
@@ -141,15 +141,13 @@ def connect(
                 links=f"tcpip(host=127.0.0.1;port={port})",
             )
         except Exception as exc:
-            raise QBWError(
-                f"cannot log in to the company file with this UID/PWD: {exc}"
-            ) from exc
+            raise QBWError(f"cannot log in with this UID and PWD: {exc}") from exc
         try:
             conn.char_set = "iso-8859-1"
             conn.valueof = sqlanydb.mk_valueof((sqlanydb.A_BINARY,), "iso-8859-1")
             conn.assign = sqlanydb.mk_assign("iso-8859-1")
         except Exception as exc:  # noqa: BLE001 - defensive
-            log.warning("could not set latin-1 decoding: %s", exc)
+            log.warning("cannot set latin-1 decoding: %s", exc)
     return conn
 
 
@@ -222,8 +220,8 @@ class SQLAnywhereEngine:
         while time.time() < deadline:
             if self.proc and self.proc.poll() is not None:
                 raise QBWError(
-                    f"engine exited early (code {self.proc.returncode}). "
-                    f"See log: {self.log_path}\n" + self._tail_log()
+                    f"engine exited early (exit code {self.proc.returncode}). "
+                    f"Last lines of {self.log_path}:\n" + self._tail_log()
                 )
             if self.log_path.exists():
                 txt = self.log_path.read_text(errors="replace")
@@ -231,9 +229,15 @@ class SQLAnywhereEngine:
                     log.info("engine ready")
                     return
                 if "Database server stopped" in txt or "Fatal error" in txt:
-                    raise QBWError("engine failed to start:\n" + self._tail_log())
+                    raise QBWError(
+                        f"engine failed to start. Last lines of {self.log_path}:\n"
+                        + self._tail_log()
+                    )
             time.sleep(0.3)
-        raise QBWError(f"engine timed out after {timeout}s. Log:\n" + self._tail_log())
+        raise QBWError(
+            f"engine did not start within {timeout:g} seconds. "
+            f"Last lines of {self.log_path}:\n" + self._tail_log()
+        )
 
     def _tail_log(self, n: int = 25) -> str:
         try:
@@ -241,7 +245,7 @@ class SQLAnywhereEngine:
                 self.log_path.read_text(errors="replace").splitlines()[-n:]
             )
         except OSError:
-            return "(no log)"
+            return "(no log file)"
 
     def stop(self) -> None:
         """Stop the engine process. Kills it if a clean stop fails."""

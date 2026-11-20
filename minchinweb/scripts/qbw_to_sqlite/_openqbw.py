@@ -101,7 +101,8 @@ def run_openqbw_backend(
         import openqbw  # type: ignore[import-not-found]
     except ImportError as exc:
         raise QBWError(
-            "the openqbw backend needs `pip install openqbw` (Python 3.10+)"
+            "the openqbw backend needs the openqbw package: "
+            "pip install openqbw (Python 3.10 or later)"
         ) from exc
 
     with warnings.catch_warnings(record=True) as caught:
@@ -113,7 +114,7 @@ def run_openqbw_backend(
             "_openqbw_transactions": reader.transactions(),
             "_openqbw_line_items": reader.line_items(),
         }
-    log.info("openqbw: %d library warnings recorded in _openqbw_warnings", len(caught))
+    log.info("openqbw recorded %d warnings in _openqbw_warnings", len(caught))
 
     problems: list[str] = []
     dst.execute("BEGIN")

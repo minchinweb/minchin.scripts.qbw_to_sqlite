@@ -60,7 +60,9 @@ def _try_inflate(data: bytes, start: int, dest: Path) -> bool:
                     return False
                 total += len(piece)
                 if total > MAX_INFLATED_BYTES:
-                    raise QBWError("company file inflates past the 1 GiB safety cap")
+                    raise QBWError(
+                        "company file would exceed the 1 GiB extraction limit"
+                    )
                 out.write(piece)
                 feed = decomp.unconsumed_tail
                 if decomp.eof:
@@ -94,7 +96,7 @@ def extract_company_file(src: Path, dest: Path) -> None:
     data = src.read_bytes()
     marker_at = data.find(QBB_MARKER)
     if marker_at < 0:
-        raise QBWError(f"{src.name}: no {QBB_MARKER.decode()} marker found")
+        raise QBWError(f"{src.name}: no {QBB_MARKER.decode()} marker")
     begin = marker_at + len(QBB_MARKER)
     end = min(len(data) - 1, begin + 65536)
     for pos in range(begin, end):
@@ -103,6 +105,4 @@ def extract_company_file(src: Path, dest: Path) -> None:
             continue  # not a zlib header
         if _try_inflate(data, pos, dest):
             return
-    raise QBWError(
-        f"{src.name}: no zlib stream in the QBB inflates to a SQL Anywhere file"
-    )
+    raise QBWError(f"{src.name}: no zlib stream inflates to a SQL Anywhere file")

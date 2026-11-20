@@ -125,7 +125,10 @@ def convert(
         raise QBWError(f"company file not found: {qbw}")
     out = Path(output).resolve()
     if out == qbw or out.suffix.lower() in (".qbw", ".qbb"):
-        raise QBWError(f"refusing to write output over a QuickBooks file: {out}")
+        raise QBWError(
+            f"refusing to write {out}: it is the company file, "
+            "or it has a QuickBooks extension (.QBW or .QBB)"
+        )
 
     opt = Options(
         mode=mode,
@@ -137,7 +140,10 @@ def convert(
         strict=strict,
     )
     if opt.mode == "merge" and (opt.limit is not None or opt.where):
-        log.warning("--limit/--where with merge mode only upserts the rows selected")
+        log.warning(
+            "merge with a limit or where upserts only the selected rows; "
+            "other rows stay as they were"
+        )
 
     kind = "qbb" if is_qbb(qbw) else "qbw"
     meta: dict[str, Any] = {
@@ -169,7 +175,8 @@ def convert(
     dst: sqlite3.Connection | None = None
 
     try:
-        log.info("reading %s -> working copy %s", kind.upper(), company)
+        verb = "extracting" if kind == "qbb" else "copying"
+        log.info("%s %s to working copy %s", verb, kind.upper(), company)
         if kind == "qbb":
             extract_company_file(qbw, company)
         else:
@@ -231,7 +238,7 @@ def convert(
             meta=meta,
         )
     except sqlite3.Error as exc:
-        raise QBWError(f"SQLite: {exc}") from exc
+        raise QBWError(f"SQLite error: {exc}") from exc
     finally:
         if dst is not None:
             dst.close()
@@ -253,9 +260,11 @@ def _check_arguments(
     batch_size: int,
 ) -> None:
     if backend not in BACKENDS:
-        raise ValueError(f"backend must be one of {BACKENDS}, not {backend!r}")
+        raise ValueError(
+            f"backend must be {' or '.join(map(repr, BACKENDS))}, not {backend!r}"
+        )
     if mode not in MODES:
-        raise ValueError(f"mode must be one of {MODES}, not {mode!r}")
+        raise ValueError(f"mode must be {' or '.join(map(repr, MODES))}, not {mode!r}")
     if backend == "sa" and not (uid and pwd):
         raise ValueError("the sa backend needs uid and pwd (see the README)")
     if limit is not None and limit < 1:
@@ -266,11 +275,15 @@ def _check_arguments(
 
 def _log_table(i: int, total: int, res: TableResult) -> None:
     label = f"{res.owner}.{res.table}"
-    detail = f"{res.rows_written} rows" if res.rows_written else "0 rows"
+    detail = f"{res.rows_written} rows"
     if res.status != "OK":
         detail += f", {res.status}"
-    if res.error:
-        detail += f": {res.error.splitlines()[0]}"
+    if res.status == "REJECTED_ROWS":
+        detail += f" ({len(res.rejects)} rejected)"
+    if res.error is not None:
+        detail += f": {next(iter(res.error.splitlines()), 'unknown error')}"
+    elif res.status in PROBLEM_STATUSES and res.note:
+        detail += f": {res.note}"
     log.info("[%4d/%d] %s: %s", i, total, label, detail)
 
 
@@ -307,7 +320,7 @@ def run_sa_backend(
     """
     sa = find_sqlany_dir(sa_dir)
     meta["sa_dir"] = str(sa)
-    log.info("SQL Anywhere 17: %s", sa)
+    log.info("found SQL Anywhere 17 at %s", sa)
 
     dbname = server + "_DB"
     engine = SQLAnywhereEngine(
@@ -321,7 +334,7 @@ def run_sa_backend(
     conn = None
     try:
         engine.start()
-        log.info("connecting")
+        log.info("connecting to the engine")
         conn = connect(sa, uid=uid, pwd=pwd, server=server, dbname=dbname, port=port)
         cur = conn.cursor()
 
@@ -343,7 +356,7 @@ def run_sa_backend(
         if views:
             log.info("views created: %s", ", ".join(views))
         for skip in views_skipped:
-            log.info("views skipped %s", skip)
+            log.info("view skipped: %s", skip)
         meta["views"] = views
         meta["views_skipped"] = views_skipped
 

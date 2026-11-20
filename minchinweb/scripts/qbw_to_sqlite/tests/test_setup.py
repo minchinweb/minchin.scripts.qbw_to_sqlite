@@ -1,9 +1,9 @@
 # Copyright (c) 2026 William Minchin
-"""Smoke test: proves the test runner and discovery work."""
+"""Smoke test: confirms that pytest finds and runs tests in this package."""
 
 from __future__ import annotations
 
 
 def test_always_pass() -> None:
-    """Should always pass. Shows test runner is working."""
+    """Always passes. Fails only if pytest cannot run this package's tests."""
     assert True
