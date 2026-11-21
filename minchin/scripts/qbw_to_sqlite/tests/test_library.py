@@ -19,9 +19,13 @@ from minchin.scripts.qbw_to_sqlite import (
 )
 
 
-def test_driver_context_restores_environment_and_path(tmp_path: Path) -> None:
+def test_driver_context_restores_environment_and_path(
+    tmp_path: Path, monkeypatch
+) -> None:
     # A fake install with dbcapi.dll but no sqlanydb.py: the import fails, and
-    # the process environment must come back exactly as it was.
+    # the process environment must come back exactly as it was. A real
+    # sqlanydb already imported by another test must not satisfy this import.
+    monkeypatch.delitem(sys.modules, "sqlanydb", raising=False)
     (tmp_path / "Bin64").mkdir()
     (tmp_path / "Bin64" / "dbcapi.dll").write_bytes(b"")
     env_before = dict(os.environ)

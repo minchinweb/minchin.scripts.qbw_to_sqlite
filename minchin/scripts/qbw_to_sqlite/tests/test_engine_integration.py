@@ -1,6 +1,6 @@
 # Copyright (c) 2026 William Minchin
-"""Engine integration tests. They need SQL Anywhere 17, the sample file, and
-the QBW_TEST_UID and QBW_TEST_PWD environment variables; otherwise they skip.
+"""Engine integration tests. They need SQL Anywhere 17 and the sample file;
+otherwise they skip. They log in with the built-in credentials.
 """
 
 from __future__ import annotations
@@ -24,27 +24,15 @@ def _sa_available() -> bool:
 
 
 needs_engine = pytest.mark.skipif(
-    not (
-        _sa_available()
-        and SAMPLE.exists()
-        and os.environ.get("QBW_TEST_UID")
-        and os.environ.get("QBW_TEST_PWD")
-    ),
-    reason="needs SQL Anywhere 17, the sample file, and QBW_TEST_UID/QBW_TEST_PWD",
+    not (_sa_available() and SAMPLE.exists()),
+    reason="needs SQL Anywhere 17 and the sample file",
 )
 
 
 @needs_engine
 def test_full_run_is_clean_and_matches_expectations(tmp_path: Path) -> None:
     out = tmp_path / "out.sqlite"
-    report = convert(
-        SAMPLE,
-        out,
-        uid=os.environ["QBW_TEST_UID"],
-        pwd=os.environ["QBW_TEST_PWD"],
-        port=29197,
-        work_dir=tmp_path,
-    )
+    report = convert(SAMPLE, out, port=29197, work_dir=tmp_path)
     assert report.ok, report.problems
     assert report.output == out.resolve()
     c = sqlite3.connect(str(out))
@@ -67,13 +55,6 @@ def test_full_run_is_clean_and_matches_expectations(tmp_path: Path) -> None:
 @needs_engine
 def test_engine_run_leaves_process_environment_unchanged(tmp_path: Path) -> None:
     env_before = dict(os.environ)
-    convert(
-        SAMPLE,
-        tmp_path / "out.sqlite",
-        uid=os.environ["QBW_TEST_UID"],
-        pwd=os.environ["QBW_TEST_PWD"],
-        port=29198,
-        work_dir=tmp_path,
-    )
+    convert(SAMPLE, tmp_path / "out.sqlite", port=29198, work_dir=tmp_path)
     assert os.environ.get("SQLANY_API_DLL") == env_before.get("SQLANY_API_DLL")
     assert os.environ.get("PATH") == env_before.get("PATH")

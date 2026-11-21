@@ -56,6 +56,7 @@ qbw2sqlite = "minchin.scripts.qbw_to_sqlite.cli:main"
 dev = [
   "invoke >= 2.2",
   "minchin.tasks >= 1.1",        # brings taplo and validate-pyproject
+  "openqbw >= 0.2.0; python_version >= '3.10'", # the optional backend, tested
   "pytest >= 8",
   "ruff >= 0.14",
   { include-group = "release" },
