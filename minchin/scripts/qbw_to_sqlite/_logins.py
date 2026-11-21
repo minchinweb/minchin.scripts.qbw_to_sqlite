@@ -7,7 +7,8 @@ from typing import NamedTuple
 
 # The built-in logins, as (user name, format, password value as hex). Each user
 # has one password per company-file format. The format of the file decides which
-# one works, so every entry is tried until one logs in.
+# one works, so every entry is tried until one logs in. The 2017-and-earlier
+# passwords are 68 hex characters; the newer ones are 42.
 DEFAULT_LOGINS: tuple[tuple[str, str, str], ...] = (
     (
         "Admin",

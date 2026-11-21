@@ -1,6 +1,151 @@
 qbw-to-sqlite
 =============
 
+|Version| |Testing| |Downloads| |Changelog| |License| |Pythons|
+
+Fifteen years ago, Quickbooks was the obvious choice for my small business
+accounting. I was happy enough to pay the ~$250 every 3 years to get the
+updates. Then about 5 years ago they decided to drop the desktop version to
+force everyone online, but I wasn't interested in paying a monthly fee *per
+company*, plus I like having my data local so I can access it on my own terms.
+
+For now, my old (unsupported) QuickBooks (desktop version) limps along, but
+every so often I think of moving to something else. This is one of those steps:
+to get access to the transaction history of the file. The (official) SDK would
+allow much of the access, but it particular, I wanted to be able to see details
+on bank feed imports, which it's didn't expose.
+
+What You Need to Make Use of This
+---------------------------------
+
+- a Quickbooks file (``.QBW``)
+- that Quickbooks files needs a password-less user -- If you can still load the
+  file in Quickbooks, you can add one. This is the only piece you need
+  Quickbooks itself for.
+- Python installed
+- SQL Anywhere 17 installed -- This is the database engine that Quickbooks
+  uses. You can download a free "Developer Edition". Python uses the interface
+  it ships. (Offical) `SAP Download Linke
+  <https://help.sap.com/docs/SUPPORT_CONTENT/sqlany/3362971128.html>`_,
+  (unofficial) `Softpedia mirror
+  <https://www.softpedia.com/get/Programming/Other-Programming-Files/SQL-Anywhere-Studio.shtml>`_.
+- (maybe) `TheGrideon's Quickbook Forensics
+  <https://www.thegrideon.com/quickbooks-forensics.html>`_. Their Trial version
+  is fine (and free).
+
+Adding a Password-less User
+---------------------------
+
+You can use an existing password-less user if you have one.
+
+1. Open your Quickbooks file.
+2. Under the menus: Company --> Setup Users and Passwords --> Set Up Users...
+3. You'll need to provide the adminstrator password on the dialog.
+4. On the "User List" dialog (that should now be open), click "Add User..."
+
+   .. image:: docs/images/user-list.png
+      :alt: QuickBooks User List dialog showing the beancount user
+
+5. Give your user a "User Name", and leave the password blank. Click "Next".
+   Click "No" if it asks you if you want to give the user a password. Give it
+   access to "All areas of Quickbooks". Click "Ok" on the confimation, and the
+   "Finish".
+
+   .. image:: docs/images/new-user.png
+      :alt: QuickBooks user name and password page, password left blank
+
+   .. image:: docs/images/all-access.png
+      :alt: QuickBooks access page with "All areas of QuickBooks" selected
+
+If you name your new user ``Admin``, ``beancount`` or ``minchinweb``, the
+script already has its password. For any other name, generate the password with
+*Quickbooks Forensics*:
+
+1. Open the program. Click on the "UID / PWD" button.
+2. Input your new user's name.
+3. Click the "Quickbooks 2018-2024" checkbox on the bottom (if applicable)
+4. Copy the UID and PWD for the next step.
+
+   .. image:: docs/images/uid-pwd.png
+      :alt: QuickBooks Forensics UID / PWD calculator for the beancount user
+
+
+How to Run it
+-------------
+
+Simpliest is the CLI script:
+
+.. code-block:: console
+
+    qbw-to-sqlite --qbw "Your Company.QBW" --out your_company.sqlite ^
+        --user beancount
+
+Without ``--user``, the built-in logins are tried in turn. Pass ``--pwd`` only for a
+user name the script doesn't know, or to override its password.
+
+What You Get; Next Steps
+------------------------
+
+You get an SQL dump of your Quickbooks files: ~250 tables of data.
+
+Next, you (or I or us together) need to figure out what all those tables mean.
+Some will be Quickbook's internal settings, which we can probably ignore. Many
+more will be your transactions and so forth: the data of interest. I will try
+and add notes here as I discover things of note; my searches seem to suggest
+the database format is basically undocumented.
+
+AI Disclosure
+-------------
+
+The above portion of the Readme (including this section) was written by me, a
+human. The rest of the Readme and code was written by an AI, specially Opus
+4.8. I tried to use Opus 5.5, but it seemed thrown off by the fact that there
+was any sort of decryption at all involved to read the database. Hopefully with
+this code, you won't run into the same roadblock.
+
+As for the state of the code, it's at "It (mostly) works for me, on my machine,
+with my files." And it would probably still be in that state whether this code
+had been handcrafted or AI written.
+
+Contributions
+-------------
+
+Contributions are welcome. If you're using an AI, make sure it's behaved.
+
+License
+-------
+
+MIT. If you break it, you get to keep both peices ;)
+
+
+.. |Version| image:: https://img.shields.io/pypi/v/minchin.scripts.qbw-to-sqlite.svg?style=flat
+   :target: https://pypi.org/project/minchin.scripts.qbw-to-sqlite/
+   :alt: PyPI version number
+
+.. |Testing| image:: https://github.com/minchinweb/minchin.scripts.qbw_to_sqlite/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/minchinweb/minchin.scripts.qbw_to_sqlite/actions/workflows/test.yml
+   :alt: Test workflow status
+
+.. |Downloads| image:: https://img.shields.io/pypi/dm/minchin.scripts.qbw-to-sqlite.svg?style=flat
+   :target: https://pypi.org/project/minchin.scripts.qbw-to-sqlite/
+   :alt: Download count
+
+.. |Changelog| image:: https://img.shields.io/badge/-Changelog-success?style=flat
+   :target: https://github.com/minchinweb/minchin.scripts.qbw_to_sqlite/blob/master/CHANGELOG.rst
+   :alt: Changelog
+
+.. |License| image:: https://img.shields.io/pypi/l/minchin.scripts.qbw-to-sqlite.svg?style=flat&color=green
+   :target: https://github.com/minchinweb/minchin.scripts.qbw_to_sqlite/blob/master/LICENSE.txt
+   :alt: License
+
+.. |Pythons| image:: https://img.shields.io/pypi/pyversions/minchin.scripts.qbw-to-sqlite?style=flat
+   :target: https://pypi.org/project/minchin.scripts.qbw-to-sqlite/
+   :alt: Supported Python versions
+
+
+Original (AI) Readme
+====================
+
 Convert a QuickBooks Desktop company file (``.QBW``, or a ``.QBB`` backup) into a
 SQLite database that any SQLite tool can read: pandas, Metabase or ``sqlite3``.
 The conversion copies every user table with its declared column types and primary
@@ -37,8 +182,7 @@ Use as a library
         report = convert(
             r"C:\path\to\Your Company.QBW",
             r"C:\path\to\your_company.sqlite",
-            uid="6265616e636f756e74",  # "beancount", as hex
-            pwd="07ec23...2fc00",
+            user="beancount",  # optional: omit to try the built-in logins
             tables=["abmc_*"],  # optional: only these tables
         )
     except QBWError as exc:
@@ -54,7 +198,7 @@ Use as a library
 ``rows_written`` properties summarize them.
 
 ``convert()`` raises ``QBWError`` when the conversion cannot run at all: the file is
-missing, the output path is refused, the engine will not start, or the login fails.
+missing, the output path is refused, the engine will not start, or no login works.
 It writes no output in those cases. It raises ``ValueError`` for an invalid
 argument, such as ``mode="append"``. A report with problems still means the
 conversion finished, so check ``report.ok``.
@@ -71,7 +215,7 @@ Command line
 .. code-block:: console
 
     qbw-to-sqlite --qbw "Your Company.QBW" --out your_company.sqlite ^
-        --uid 6265616e636f756e74 --pwd 07ec23...2fc00
+        --user beancount
 
 From a checkout, run ``python qbw_to_sqlite.py`` with the same arguments, without
 installing. The command line uses the public API, so
@@ -89,8 +233,8 @@ installing. The command line uses the public API, so
      - SQLite file to create. Refused if it is a QuickBooks file. Replaced atomically, even when the run finishes with problems.
    * - ``--backend``
      - ``sa`` (default) or ``openqbw`` (experimental).
-   * - ``--uid`` / ``--pwd``
-     - SQL Anywhere credential (``sa`` backend).
+   * - ``--user`` / ``--uid`` / ``--pwd``
+     - SQL Anywhere login (``sa`` backend). With none of them, the built-in logins are tried in turn: ``Admin``, ``beancount``, ``minchinweb``, each in its newer-format and 2017-and-earlier password. ``--user NAME`` generates the UID from the name. ``--uid`` takes the hex UID directly. ``--pwd`` overrides the built-in password.
    * - ``--mode``
      - ``replace`` (default) builds a fresh output and overwrites the old one. ``merge`` upserts by primary key into the existing output. Deleted rows are kept, and tables without a primary key gain duplicates. See `Re-running on an updated file`_.
    * - ``--tables PATTERN``
@@ -124,7 +268,7 @@ Exit codes
    * - Code
      - Meaning
    * - ``0``
-     - Clean. Every selected table is ``OK``, or ``FILTERED`` or ``SKIPPED`` by request.
+     - Clean. Every selected table is ``OK`` or ``FILTERED``.
    * - ``1``
      - Fatal. No output was written. Examples: wrong password, engine did not start, output path is a QuickBooks file.
    * - ``2``
@@ -143,8 +287,8 @@ Backends
      - Needs
      - Output and status
    * - ``sa`` (default)
-     - SQL Anywhere 17 install, and a no-password QuickBooks user
-     - Every base table, typed, with views and provenance. Tested on a sample company file.
+     - SQL Anywhere 17 install, and a QuickBooks user with no password (one of the built-in names, or your own)
+     - Every selected base table, typed, with views and provenance. Tables that ``--tables`` or ``--exclude`` leave out are not listed in ``_qbw_tables``. Tested on a sample company file.
    * - ``openqbw``
      - ``pip install openqbw`` (Python 3.10+), no login
      - Catalog, indexes, transactions and line items only. **Experimental.** On the sample file it found 643 catalog entries and **0 transactions and 0 line items**, so it does not replace ``sa``.
@@ -186,7 +330,7 @@ Getting the UID and PWD
 
 QuickBooks stores each user's database password as a derived value::
 
-    PWD = "07" + SHA-256( prepared(password) ) + "00"        (SQL Anywhere 17 form)
+    PWD = "07" + SHA-256( prepared(password) ) + "00"        (2017-and-earlier form)
     UID = the QuickBooks user name encoded as ASCII hex
           e.g. "Admin"     -> 41646d696e
                "beancount" -> 6265616e636f756e74
@@ -204,8 +348,10 @@ credential.
 4. **Exit QuickBooks completely**, so the new user is written to disk.
 5. Get the credential. ``UID`` is ``python -c "print('beancount'.encode().hex())"``.
    ``PWD`` is the blank-password output of the *SQL Anywhere database UID & PWD
-   Calculator* in Thegrideon QuickBooks Forensics. It is about 68 hex characters of
-   the form ``07...00``.
+   Calculator* in Thegrideon QuickBooks Forensics. For the 2017-and-earlier form, it
+   is 68 hex characters of the form ``07...00``. The newer form is 42 characters
+   starting ``06``, which the formula above does not describe. The built-in values
+   cover both forms for Admin, beancount and minchinweb.
 
 The same user name gives the same ``UID`` and ``PWD`` in every company file. If a
 file's **Admin** user has no password, use Admin directly.
@@ -292,9 +438,6 @@ Table statuses
      - no
    * - ``FILTERED``
      - Copied with ``--limit`` or ``--where``, so the count check was skipped.
-     - no
-   * - ``SKIPPED``
-     - Not selected by ``--tables`` or ``--exclude``.
      - no
    * - ``REJECTED_ROWS``
      - Some rows could not be written. They are logged in ``_qbw_rejected``.
@@ -394,8 +537,9 @@ Caveats
 - **The ``.DSN`` and ``.ND`` files** beside a ``.QBW`` belong to QuickBooks. This
   library does not produce them.
 - **SQL Anywhere version.** The library targets the SQL Anywhere **17** format that
-  QuickBooks 2018 and later use. Older files need the matching engine and password
-  form.
+  QuickBooks 2018 and later use. The built-in 2017-and-earlier passwords are tried
+  against the same SQL Anywhere 17 engine. That path has not been tested on a real
+  file from those years.
 - **Output goes to a ``.<name>.<id>.partial`` file beside ``out``.** The library
   renames it only on completion. A fatal error leaves any existing output untouched.
 - **One engine serves one conversion at a time.** The driver stays loaded for the
