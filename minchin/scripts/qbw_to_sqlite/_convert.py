@@ -27,7 +27,11 @@ from minchin.scripts.qbw_to_sqlite._engine import (
     connect,
     find_sqlany_dir,
 )
-from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import (
+    DatabaseError,
+    InputError,
+    OutputPathError,
+)
 from minchin.scripts.qbw_to_sqlite._models import (
     PROBLEM_STATUSES,
     ColumnInfo,
@@ -122,10 +126,10 @@ def convert(
 
     qbw = Path(source).resolve()
     if not qbw.exists():
-        raise QBWError(f"company file not found: {qbw}")
+        raise InputError(f"company file not found: {qbw}")
     out = Path(output).resolve()
     if out == qbw or out.suffix.lower() in (".qbw", ".qbb"):
-        raise QBWError(
+        raise OutputPathError(
             f"refusing to write {out}: it is the company file, "
             "or it has a QuickBooks extension (.QBW or .QBB)"
         )
@@ -238,7 +242,7 @@ def convert(
             meta=meta,
         )
     except sqlite3.Error as exc:
-        raise QBWError(f"SQLite error: {exc}") from exc
+        raise DatabaseError(f"SQLite error: {exc}") from exc
     finally:
         if dst is not None:
             dst.close()

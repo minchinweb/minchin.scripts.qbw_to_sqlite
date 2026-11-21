@@ -14,7 +14,7 @@ import time
 from types import ModuleType
 from typing import Any
 
-from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import EngineError, EngineNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def find_sqlany_dir(explicit: str | os.PathLike[str] | None) -> Path:
     for c in candidates:
         if (c / "Bin64" / "dbeng17.exe").exists():
             return c
-    raise QBWError(
+    raise EngineNotFoundError(
         "cannot find SQL Anywhere 17 (Bin64\\dbeng17.exe). Install it, or pass "
         'sa_dir (--sa-dir), e.g. "C:\\Program Files\\SQL Anywhere 17".'
     )
@@ -77,7 +77,7 @@ def sqlany_driver(sa_dir: Path) -> Iterator[ModuleType]:
     sdk_py = sa_dir / "SDK" / "Python"
     dbcapi = bin64 / "dbcapi.dll"
     if not dbcapi.exists():
-        raise QBWError(f"cannot find dbcapi.dll at {dbcapi}")
+        raise EngineNotFoundError(f"cannot find dbcapi.dll at {dbcapi}")
     changes = {
         "SQLANY_API_DLL": str(dbcapi),
         "PATH": str(bin64) + os.pathsep + os.environ.get("PATH", ""),
@@ -94,7 +94,7 @@ def sqlany_driver(sa_dir: Path) -> Iterator[ModuleType]:
         try:
             import sqlanydb  # type: ignore[import-not-found]
         except Exception as exc:
-            raise QBWError(
+            raise EngineNotFoundError(
                 f"cannot import 'sqlanydb' (looked in {sdk_py}): {exc}"
             ) from exc
         yield sqlanydb
@@ -141,7 +141,7 @@ def connect(
                 links=f"tcpip(host=127.0.0.1;port={port})",
             )
         except Exception as exc:
-            raise QBWError(f"cannot log in with this UID and PWD: {exc}") from exc
+            raise EngineError(f"cannot log in with this UID and PWD: {exc}") from exc
         try:
             conn.char_set = "iso-8859-1"
             conn.valueof = sqlanydb.mk_valueof((sqlanydb.A_BINARY,), "iso-8859-1")
@@ -219,7 +219,7 @@ class SQLAnywhereEngine:
         deadline = time.time() + timeout
         while time.time() < deadline:
             if self.proc and self.proc.poll() is not None:
-                raise QBWError(
+                raise EngineError(
                     f"engine exited early (exit code {self.proc.returncode}). "
                     f"Last lines of {self.log_path}:\n" + self._tail_log()
                 )
@@ -229,12 +229,12 @@ class SQLAnywhereEngine:
                     log.info("engine ready")
                     return
                 if "Database server stopped" in txt or "Fatal error" in txt:
-                    raise QBWError(
+                    raise EngineError(
                         f"engine failed to start. Last lines of {self.log_path}:\n"
                         + self._tail_log()
                     )
             time.sleep(0.3)
-        raise QBWError(
+        raise EngineError(
             f"engine did not start within {timeout:g} seconds. "
             f"Last lines of {self.log_path}:\n" + self._tail_log()
         )

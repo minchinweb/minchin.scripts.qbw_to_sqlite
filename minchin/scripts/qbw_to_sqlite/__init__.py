@@ -18,7 +18,14 @@ from __future__ import annotations
 import logging
 
 from minchin.scripts.qbw_to_sqlite._convert import convert
-from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import (
+    DatabaseError,
+    EngineError,
+    EngineNotFoundError,
+    InputError,
+    OutputPathError,
+    QBWError,
+)
 from minchin.scripts.qbw_to_sqlite._models import ConversionReport, TableResult
 from minchin.scripts.qbw_to_sqlite._version import __version__
 
@@ -26,4 +33,15 @@ from minchin.scripts.qbw_to_sqlite._version import __version__
 # the caller attaches one.
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-__all__ = ["ConversionReport", "QBWError", "TableResult", "__version__", "convert"]
+__all__ = [
+    "ConversionReport",
+    "DatabaseError",
+    "EngineError",
+    "EngineNotFoundError",
+    "InputError",
+    "OutputPathError",
+    "QBWError",
+    "TableResult",
+    "__version__",
+    "convert",
+]

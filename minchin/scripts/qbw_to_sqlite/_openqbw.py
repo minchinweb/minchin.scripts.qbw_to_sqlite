@@ -10,7 +10,7 @@ from pathlib import Path
 import sqlite3
 import warnings
 
-from minchin.scripts.qbw_to_sqlite._errors import QBWError
+from minchin.scripts.qbw_to_sqlite._errors import EngineNotFoundError
 from minchin.scripts.qbw_to_sqlite._text import quote_ident
 
 log = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def run_openqbw_backend(
     try:
         import openqbw  # type: ignore[import-not-found]
     except ImportError as exc:
-        raise QBWError(
+        raise EngineNotFoundError(
             "the openqbw backend needs the openqbw package: "
             "pip install openqbw (Python 3.10 or later)"
         ) from exc
