@@ -1,7 +1,7 @@
 Changelog
 =========
 
-- :release:`0.1.0 <unreleased>`
+- :release:`0.1.0 <2026-11-21>`
 - :feature:`-` dumps ``.QBW`` files to a SQLite database.
 - :feature:`-` Experimental support for ``.QBB`` files (backups).
 - :feature:`-` Experimental ``openqbw`` backend (optional extra). It returns

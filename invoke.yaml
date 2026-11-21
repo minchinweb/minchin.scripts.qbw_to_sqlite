@@ -1,11 +1,14 @@
 releaser:
-    module_name: minchin.scripts.qbw_to_sqlite
-    pypi_name: minchin.scripts.qbw-to-sqlite
-    here: .
-    docs: none
-    test: none
-    source: minchin
-    changelog: CHANGELOG.rst
-    version: minchin/scripts/qbw_to_sqlite/_version.py
-    test_command: none
-    version_bump: none
+  module_name: minchin.scripts.qbw_to_sqlite
+  pypi_name: minchin.scripts.qbw-to-sqlite
+  here: .
+  docs: none
+  test: none
+  source: minchin
+  changelog: CHANGELOG.rst
+  version: minchin/scripts/qbw_to_sqlite/_version.py
+  test_command: pytest -q
+  version_bump: none
+  extra_packages:
+    test:
+      - setuptools

@@ -43,11 +43,7 @@ from minchin.scripts.qbw_to_sqlite._models import (
 )
 from minchin.scripts.qbw_to_sqlite._openqbw import run_openqbw_backend
 from minchin.scripts.qbw_to_sqlite._provenance import write_provenance
-from minchin.scripts.qbw_to_sqlite._qbb import (
-    extract_company_file,
-    is_qbb,
-    sha256_file,
-)
+from minchin.scripts.qbw_to_sqlite._qbb import extract_company_file, is_qbb, sha256_file
 from minchin.scripts.qbw_to_sqlite._version import __version__
 from minchin.scripts.qbw_to_sqlite._views import create_views
 
