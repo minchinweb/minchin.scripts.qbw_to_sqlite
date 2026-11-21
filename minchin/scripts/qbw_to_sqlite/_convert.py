@@ -29,9 +29,11 @@ from minchin.scripts.qbw_to_sqlite._engine import (
 )
 from minchin.scripts.qbw_to_sqlite._errors import (
     DatabaseError,
+    EngineError,
     InputError,
     OutputPathError,
 )
+from minchin.scripts.qbw_to_sqlite._logins import Login, login_candidates
 from minchin.scripts.qbw_to_sqlite._models import (
     PROBLEM_STATUSES,
     ColumnInfo,
@@ -50,7 +52,7 @@ from minchin.scripts.qbw_to_sqlite._version import __version__
 from minchin.scripts.qbw_to_sqlite._views import create_views
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Mapping, Sequence
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ def convert(
     source: str | PathLike[str],
     output: str | PathLike[str],
     *,
+    user: str | None = None,
     uid: str | None = None,
     pwd: str | None = None,
     backend: str = "sa",
@@ -90,8 +93,12 @@ def convert(
     Args:
         source: Path to a ``.QBW`` company file or a ``.QBB`` backup.
         output: The SQLite file to create. Refused if it is a QuickBooks file.
-        uid: The SQL Anywhere user name as hex. Required for the sa backend.
-        pwd: The SQL Anywhere password value. Required for the sa backend.
+        user: The SQL Anywhere user name, such as ``"beancount"``. Its UID is
+            generated. Used only by the sa backend.
+        uid: The SQL Anywhere user name as hex. Overrides ``user``.
+        pwd: The SQL Anywhere password value as hex. Defaults to the built-in
+            password for the user name. With neither ``user`` nor ``uid``, every
+            built-in login is tried in turn, using ``pwd`` if given.
         backend: ``"sa"`` (the SQL Anywhere engine, the default) or
             ``"openqbw"`` (experimental, no login, catalog and transactions only).
         mode: ``"replace"`` writes a fresh output. ``"merge"`` starts from the
@@ -120,9 +127,10 @@ def convert(
             the output path is refused, the engine will not start, or the login
             fails. No output is written in these cases.
         ValueError: An argument is not valid, for example an unknown ``mode``,
-            or the sa backend without ``uid`` and ``pwd``.
+            or a single login with no password.
     """
-    _check_arguments(backend, mode, uid, pwd, limit, batch_size)
+    _check_arguments(backend, mode, limit, batch_size)
+    logins = login_candidates(user, uid, pwd) if backend == "sa" else []
 
     qbw = Path(source).resolve()
     if not qbw.exists():
@@ -200,14 +208,12 @@ def convert(
             results, columns = [], {}
             problems = run_openqbw_backend(company, dst, strict)
         else:
-            assert uid is not None and pwd is not None  # checked above
             results, columns = run_sa_backend(
                 company,
                 dst,
                 opt,
                 meta,
-                uid=uid,
-                pwd=pwd,
+                logins=logins,
                 sa_dir=sa_dir,
                 server=server,
                 port=port,
@@ -258,8 +264,6 @@ def convert(
 def _check_arguments(
     backend: str,
     mode: str,
-    uid: str | None,
-    pwd: str | None,
     limit: int | None,
     batch_size: int,
 ) -> None:
@@ -269,8 +273,6 @@ def _check_arguments(
         )
     if mode not in MODES:
         raise ValueError(f"mode must be {' or '.join(map(repr, MODES))}, not {mode!r}")
-    if backend == "sa" and not (uid and pwd):
-        raise ValueError("the sa backend needs uid and pwd (see the README)")
     if limit is not None and limit < 1:
         raise ValueError("limit must be at least 1")
     if batch_size < 1:
@@ -291,14 +293,47 @@ def _log_table(i: int, total: int, res: TableResult) -> None:
     log.info("[%4d/%d] %s: %s", i, total, label, detail)
 
 
+def _login_first(
+    sa: Path,
+    logins: Sequence[Login],
+    *,
+    server: str,
+    dbname: str,
+    port: int,
+) -> tuple[Any, Login]:
+    """Log in with each login in turn. Return the first connection that works.
+
+    Raises:
+        EngineError: Every login was refused.
+    """
+    last: EngineError | None = None
+    for login in logins:
+        try:
+            conn = connect(
+                sa,
+                uid=login.uid,
+                pwd=login.pwd,
+                server=server,
+                dbname=dbname,
+                port=port,
+            )
+        except EngineError as exc:
+            log.info("login as %s refused", login.label)
+            last = exc
+            continue
+        log.info("logged in as %s", login.label)
+        return conn, login
+    names = ", ".join(login.label for login in logins)
+    raise EngineError(f"no login worked (tried {names})") from last
+
+
 def run_sa_backend(
     company: Path,
     dst: sqlite3.Connection,
     opt: Options,
     meta: dict[str, Any],
     *,
-    uid: str,
-    pwd: str,
+    logins: Sequence[Login],
     sa_dir: str | PathLike[str] | None,
     server: str,
     port: int,
@@ -310,8 +345,7 @@ def run_sa_backend(
         dst: The SQLite output connection.
         opt: Selection and batching settings.
         meta: Run-level values. Filled with the install folder and the views.
-        uid: The SQL Anywhere user name as hex.
-        pwd: The SQL Anywhere password value.
+        logins: The logins to try, in order. The first one that works is used.
         sa_dir: The install folder, or None to find it.
         server: Name of the temporary engine.
         port: Private TCP port for the temporary engine.
@@ -339,7 +373,8 @@ def run_sa_backend(
     try:
         engine.start()
         log.info("connecting to the engine")
-        conn = connect(sa, uid=uid, pwd=pwd, server=server, dbname=dbname, port=port)
+        conn, login = _login_first(sa, logins, server=server, dbname=dbname, port=port)
+        meta["login_user"] = login.name
         cur = conn.cursor()
 
         selected_tables = [

@@ -58,14 +58,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         choices=["sa", "openqbw"],
         default="sa",
-        help="sa: SQL Anywhere engine; needs --uid and --pwd. "
+        help="sa: SQL Anywhere engine (default). "
         "openqbw: experimental; no login; catalog, indexes, transactions and "
         "line items only",
     )
     p.add_argument(
-        "--uid", help="SQL Anywhere UID (hex user name, e.g. 6265616e636f756e74)"
+        "--user",
+        metavar="NAME",
+        help="SQL Anywhere user name, e.g. beancount. Its UID is generated. "
+        "Without --user, --uid or --pwd, the built-in logins are tried in turn",
     )
-    p.add_argument("--pwd", help="SQL Anywhere PWD (hex, about 68 characters)")
+    p.add_argument(
+        "--uid",
+        help="SQL Anywhere UID as hex, e.g. 6265616e636f756e74 (overrides --user)",
+    )
+    p.add_argument(
+        "--pwd",
+        help="SQL Anywhere PWD as hex (defaults to the built-in PWD for the user)",
+    )
     p.add_argument(
         "--mode",
         choices=["replace", "merge"],
@@ -163,8 +173,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.backend == "sa" and not (args.uid and args.pwd):
-        parser.error("the sa backend needs --uid and --pwd (see --help)")
 
     # Turns on ANSI colour in the Windows console. Does nothing elsewhere.
     colorama.just_fix_windows_console()
@@ -184,6 +192,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         report = convert(
             args.qbw,
             args.out,
+            user=args.user,
             uid=args.uid,
             pwd=args.pwd,
             backend=args.backend,

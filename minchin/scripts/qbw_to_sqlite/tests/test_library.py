@@ -64,7 +64,7 @@ def test_refuses_output_with_a_quickbooks_extension(tmp_path: Path) -> None:
     [
         ({"backend": "nope"}, "backend"),
         ({"mode": "append"}, "mode"),
-        ({"uid": None, "pwd": "y"}, "uid and pwd"),
+        ({"user": "nobody"}, "no built-in PWD"),
         ({"uid": "x", "pwd": "y", "limit": 0}, "limit"),
         ({"uid": "x", "pwd": "y", "batch_size": 0}, "batch_size"),
     ],

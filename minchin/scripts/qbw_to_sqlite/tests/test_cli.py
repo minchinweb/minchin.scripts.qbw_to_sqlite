@@ -57,10 +57,12 @@ def test_cli_where_without_equals_is_a_usage_error(capsys) -> None:
     assert "expected TABLE=PREDICATE, got 'abmc_terms'" in capsys.readouterr().err
 
 
-def test_cli_sa_backend_without_credentials_is_a_usage_error() -> None:
-    with pytest.raises(SystemExit) as exc:
-        cli.main(["--qbw", "x", "--out", "y"])
-    assert exc.value.code == cli.EXIT_USAGE
+def test_cli_sa_backend_without_credentials_uses_the_built_in_logins(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # No --uid or --pwd: the run starts and fails at the missing company file.
+    assert cli.main(["--qbw", "x", "--out", "y"]) == cli.EXIT_FATAL
+    assert "company file not found" in capsys.readouterr().err
 
 
 def test_parse_where_lowercases_table() -> None:
