@@ -11,7 +11,7 @@ output/
 *.ND
 *.DSN
 
-# Third-party tools and archives (not ours to redistribute)
+# Third-party tools and archives
 *.exe
 *.zip
 *.chm
@@ -30,3 +30,7 @@ dist/
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# secrets
+.env
+

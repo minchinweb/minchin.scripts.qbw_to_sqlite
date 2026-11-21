@@ -15,6 +15,6 @@ Changelog
 - Merge mode, table and row filters, entity views for invoices, customers,
   items and accounts, and strict and lenient handling of bad rows.
 - Reads ``.QBB`` backups. Not yet tested against a real backup.
-- Experimental ``openqbw`` backend (optional extra). It returns catalog and
+- :feature:`-` Experimental ``openqbw`` backend (optional extra). It returns catalog and
   transaction data only, and is not a full copy.
-- Requires Python 3.9 or later. Tested on 3.9 and 3.15 in CI.
+- :support:`-` Requires Python 3.9 or later. Tested on 3.9 and 3.15 in CI.
